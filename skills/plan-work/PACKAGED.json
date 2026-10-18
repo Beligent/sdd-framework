@@ -1,0 +1,13 @@
+{
+  "generated": true,
+  "resources": {
+    "references/shared/governance.md": "skills/define-work/references/shared/governance.md",
+    "references/technology/fastapi.md": "skills/implement-ticket/references/technology/fastapi.md",
+    "references/technology/nextjs.md": "skills/implement-ticket/references/technology/nextjs.md",
+    "references/technology/nodejs.md": "skills/implement-ticket/references/technology/nodejs.md",
+    "references/technology/python.md": "skills/implement-ticket/references/technology/python.md",
+    "references/technology/react-typescript.md": "skills/implement-ticket/references/technology/react-typescript.md",
+    "references/ticket-management/contract.md": "skills/define-work/references/ticket-management/contract.md",
+    "references/ticket-management/markdown.md": "skills/define-work/references/ticket-management/markdown.md"
+  }
+}

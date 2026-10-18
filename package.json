@@ -1,0 +1,76 @@
+{
+  "name": "@beligent/sdd-framework",
+  "version": "0.1.0",
+  "description": "A vendor-neutral, Agent Skills-based Specification-Driven Development framework.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/beligent/sdd-framework.git"
+  },
+  "homepage": "https://github.com/beligent/sdd-framework#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "bugs": {
+    "url": "https://github.com/beligent/sdd-framework/issues"
+  },
+  "keywords": [
+    "agent-skills",
+    "specification-driven-development",
+    "sdd",
+    "coding-agents",
+    "development-workflow"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "type": "module",
+  "bin": {
+    "sdd": "dist/cli/index.js"
+  },
+  "files": [
+    "dist/cli/index.js",
+    "dist/validation/config.js",
+    "schema/**",
+    "skills/**",
+    "docs/adoption.md",
+    "docs/agents.md",
+    "docs/architecture.md",
+    "docs/artifact-model.md",
+    "docs/customization.md",
+    "docs/cli.md",
+    "docs/installation.md",
+    "docs/lifecycle.md",
+    "docs/maintenance.md",
+    "docs/terminology.md",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "VERSION"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint src tests scripts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "sync:assets": "node --import tsx src/packaging/cli.ts",
+    "validate:framework": "node --import tsx src/validation/repository-cli.ts",
+    "validate:package": "npm run build && node scripts/check-pack.mjs",
+    "check:version": "node --import tsx src/validation/version-cli.ts"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^22.19.0",
+    "eslint": "^9.39.1",
+    "globals": "^16.5.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.2",
+    "vitest": "^5.0.5",
+    "yaml": "^2.8.1"
+  }
+}

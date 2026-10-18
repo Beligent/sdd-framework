@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "project": {
+    "name": "Team Task Tracker — worked example",
+    "type": "full-stack feature in an existing host application"
+  },
+  "assistants": ["codex"],
+  "profile": "standard",
+  "technologies": ["react-typescript", "python", "fastapi"],
+  "artifacts": {
+    "overview": "docs/sdd/overview.md",
+    "requirements": "docs/sdd/requirements",
+    "specifications": "docs/sdd/specifications",
+    "decisions": "docs/sdd/architecture/decisions",
+    "plans": "docs/sdd/plans",
+    "verification": "docs/sdd/verification",
+    "approvals": "docs/sdd/approvals",
+    "conventions": "docs/sdd/conventions"
+  },
+  "tickets": {
+    "provider": "markdown",
+    "paths": {
+      "epics": "docs/sdd/epics",
+      "tickets": "docs/sdd/tickets"
+    }
+  },
+  "profiles": {
+    "lightweight": {
+      "artifacts": ["ticket"],
+      "approvals": ["implementation", "completion"]
+    },
+    "standard": {
+      "artifacts": ["overview", "requirements", "specification", "plan", "ticket"],
+      "approvals": ["scope", "implementation", "completion"]
+    }
+  }
+}

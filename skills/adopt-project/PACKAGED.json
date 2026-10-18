@@ -1,0 +1,12 @@
+{
+  "generated": true,
+  "resources": {
+    "assets/AGENTS.fragment.md": "skills/init-project/assets/AGENTS.fragment.md",
+    "assets/CLAUDE.fragment.md": "skills/init-project/assets/CLAUDE.fragment.md",
+    "assets/config.json": "skills/init-project/assets/config.json",
+    "assets/copilot.fragment.md": "skills/init-project/assets/copilot.fragment.md",
+    "assets/project-overview.md": "skills/init-project/assets/project-overview.md",
+    "references/setup.md": "skills/init-project/references/setup.md",
+    "references/shared/governance.md": "skills/define-work/references/shared/governance.md"
+  }
+}

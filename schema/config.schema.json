@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:beligent:sdd:config:schema:1",
+  "title": "Beligent SDD project configuration",
+  "description": "Schema 1 configuration. Filesystem containment and collision checks are performed by the CLI in addition to this schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "project", "assistants", "profile", "technologies", "artifacts", "tickets", "profiles"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "project": {
+      "type": "object", "additionalProperties": false, "required": ["name", "type"],
+      "properties": { "name": { "type": "string", "minLength": 1 }, "type": { "type": "string", "minLength": 1 } }
+    },
+    "assistants": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" } },
+    "profile": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "technologies": { "type": "array", "uniqueItems": true, "items": { "enum": ["react-typescript", "nextjs", "nodejs", "python", "fastapi"] } },
+    "artifacts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["overview", "requirements", "specifications", "decisions", "plans", "verification", "approvals", "conventions"],
+      "properties": {
+        "overview": { "$ref": "#/$defs/path" }, "requirements": { "$ref": "#/$defs/path" },
+        "specifications": { "$ref": "#/$defs/path" }, "decisions": { "$ref": "#/$defs/path" },
+        "plans": { "$ref": "#/$defs/path" }, "verification": { "$ref": "#/$defs/path" },
+        "approvals": { "$ref": "#/$defs/path" }, "conventions": { "$ref": "#/$defs/path" }
+      }
+    },
+    "tickets": {
+      "type": "object", "additionalProperties": false, "required": ["provider", "paths"],
+      "properties": {
+        "provider": { "const": "markdown" },
+        "paths": { "type": "object", "additionalProperties": false, "required": ["epics", "tickets"], "properties": { "epics": { "$ref": "#/$defs/path" }, "tickets": { "$ref": "#/$defs/path" } } }
+      }
+    },
+    "profiles": {
+      "type": "object", "minProperties": 2,
+      "required": ["lightweight", "standard"],
+      "propertyNames": { "pattern": "^[a-z][a-z0-9-]*$" },
+      "additionalProperties": {
+        "type": "object", "additionalProperties": false, "required": ["artifacts", "approvals"],
+        "properties": {
+          "artifacts": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["overview", "requirements", "specification", "adr", "epic", "ticket", "plan", "verification"] } },
+          "approvals": { "type": "array", "uniqueItems": true, "items": { "enum": ["scope", "implementation", "completion"] }, "allOf": [{ "contains": { "const": "implementation" } }, { "contains": { "const": "completion" } }] }
+        }
+      }
+    }
+  },
+  "$defs": { "path": { "type": "string", "minLength": 1 } }
+}
