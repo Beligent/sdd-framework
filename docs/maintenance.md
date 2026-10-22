@@ -2,7 +2,7 @@
 
 Framework skill releases, project configuration schema, and managed instruction
 integration are independent. The `package.json` version is authoritative and
-`VERSION` is checked against it. Version `0.2.0` supports configuration schemas 1
+`VERSION` is checked against it. Version `0.2.1` supports configuration schemas 1
 and 2 and integration revision `0.1.0`. Source/revision provenance belongs to the chosen
 skills installer's lock file; `.beligent/setup-state.json` records project
 integration ownership and baseline hashes.
@@ -47,7 +47,7 @@ The registry rejects a version that has already been published. For each
 update, change `package.json`, `package-lock.json`, and `VERSION` to the same new
 semantic version, move its release notes out of `Unreleased`, validate again,
 then publish. Consumers can run this release with
-`npx @beligent/sdd-framework@0.2.0 doctor`.
+`npx @beligent/sdd-framework@0.2.1 doctor`.
 
 Publishing the npm package updates the optional CLI and the packaged skill
 files. The external `skills` installer still installs the public skill
@@ -88,7 +88,7 @@ templates changing does not authorize regenerating project documents.
 
 Newer skills check schema compatibility before affected writes. Unsupported
 schemas stop the operation with a clear migration proposal; the skill must not
-ignore the file or replace it with a current default. Version 0.2.0 supports
+ignore the file or replace it with a current default. Version 0.2.1 supports
 schemas 1 and 2. Schema-1 projects retain their existing semantics unchanged.
 
 Preview a schema-1 migration before writing it:

@@ -685,7 +685,7 @@ describe('CLI', () => {
   it('prints version and returns expected usage/unknown-command exit codes', () => {
     const version = run(['version']);
     expect(version.status).toBe(0);
-    expect(version.stdout.trim()).toBe('0.2.0');
+    expect(version.stdout.trim()).toBe('0.2.1');
     expect(run(['unknown']).status).toBe(2);
     expect(run(['validate', '--unknown']).status).toBe(2);
   });

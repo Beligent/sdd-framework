@@ -93,7 +93,7 @@ optional companion to the GitHub collection.
 
 ## Project maturity
 
-Version 0.2.0 is an early public-development release. The repository includes
+Version 0.2.1 is an early public-development release. The repository includes
 the nine skills, a worked artifact example, deterministic skill packaging,
 configuration/repository validation, and local installer checks. Actual behavior
 still depends on the coding agent and its discovery surface; the framework does

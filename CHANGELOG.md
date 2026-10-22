@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.1 — 2026-10-22
+
 Added opt-in local token accounting for Codex and Claude structured output.
 Chat harnesses can append an exact per-skill usage footer after a completed
 response, while local imports provide deduplicated per-skill totals without
