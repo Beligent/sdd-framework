@@ -1,6 +1,6 @@
 {
   "name": "@beligent/sdd-framework",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "A vendor-neutral, Agent Skills-based Specification-Driven Development framework.",
   "license": "MIT",
   "private": false,
