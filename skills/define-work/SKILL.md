@@ -5,26 +5,28 @@ description: Define or refine requirements, behavioral specifications, epics, an
 
 # Define work
 
-Create and maintain the project's behavioral contract and backlog. This skill
-does not require a complete planning sequence: select `requirements`,
-`specification`, `epics`, or `tickets` from the user's request and run that route
-directly. Workflow names are prompt selectors, not portable slash commands.
+Define or refine the requested current work. This skill does not require a
+complete planning sequence: select `requirements`, `specification`, `epics`, or
+`tickets` when explicitly requested, while an ordinary schema-2 feature request
+defaults to the smallest useful current task. Workflow names are prompt selectors,
+not portable slash commands.
 
 ## Preconditions and inputs
 
-Read applicable project instructions, `.beligent/config.json`, and
-[governance](references/shared/governance.md). This skill supports configuration
+Read applicable project instructions, `.beligent/config.json`,
+[governance](references/shared/governance.md), and the schema-2
+[current-task lifecycle](references/shared/current-task-lifecycle.md). This skill supports configuration
 `schema_version: 1` and `schema_version: 2`. If configuration is missing, explain the setup requirement;
 you may offer an explicitly unconfigured draft, but do not invent project paths
 or persist project artifacts. Unsupported schemas require a separate migration
 proposal before affected writes, never automatic regeneration.
 
-Use the selected profile, configured artifact paths, conventions, existing
-artifacts, requested workflow/operation, and available user decisions as inputs.
-Read only context relevant to the requested outcome. Reuse existing IDs and
-content rather than recreating parallel requirements or backlogs. Ask for
-missing information only when it changes the result; otherwise label assumptions
-and open questions in a draft.
+Use the selected profile, workflow depth, configured paths, existing artifacts,
+and available decisions as inputs. Reuse relevant project context and IDs rather
+than restating stable context or recreating parallel requirements and backlogs.
+For schema 1, retain the selected profile and explicitly requested management
+route. For schema 2, accept a rough request or existing requirement,
+specification, or task and identify one bounded increment.
 
 ## Select a workflow
 
@@ -42,10 +44,15 @@ define-work, workflow tickets, to refine TICKET-003 using PLAN-001.”
 
 ## Shared procedure
 
-1. Identify the requested result, current artifacts and authorized scope. Report
-   missing route-specific inputs without starting unrelated routes.
-2. Draft or refine the smallest useful artifact depth for the configured profile.
-   Separate confirmed behavior, assumptions, open questions and exclusions.
+1. Identify the requested result, current artifacts and authorized scope. For
+   schema 2, do not infer project planning, a complete backlog, or comprehensive
+   design from ordinary feature work. Report missing route-specific inputs
+   without starting unrelated routes.
+2. Draft or refine the smallest useful artifact depth. Batch only meaningful
+   blocking questions. Apply the canonical stop rule; when it is met, stop
+   specification. For schema-2 light/standard work, prefer one compact task.
+   Reuse expanded REQ/SPEC/EPIC artifacts and create new ones only when explicitly
+   requested or justified by rigor, complexity, or consequential scope.
 3. For every epic/ticket operation, load the [provider contract](references/ticket-management/contract.md)
    and the configured provider's instructions. The initial `markdown` provider is
    described [here](references/ticket-management/markdown.md). Express operations
@@ -55,8 +62,9 @@ define-work, workflow tickets, to refine TICKET-003 using PLAN-001.”
    scope, dependencies and criteria; changed behavior returns to its canonical
    management artifact instead of being hidden in a plan.
 5. Validate the result and report artifact IDs/locations, unresolved questions,
-   decisions needed, and affected approval references. A draft or `ready` flag
-   does not grant implementation approval.
+   decisions needed, and affected approval references. Respect design depth and
+   ask before gated expansion. A draft or `ready` flag does not grant
+   implementation approval.
 
 ## Outputs and validation
 

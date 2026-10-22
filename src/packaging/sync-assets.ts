@@ -9,6 +9,8 @@ export function mappings(): Mapping[] {
   const pairs: Mapping[] = [];
   const governance = 'skills/define-work/references/shared/governance.md';
   for (const skill of skills) if (skill !== 'define-work') pairs.push({ source: governance, destination: `skills/${skill}/references/shared/governance.md` });
+  const lifecycle = 'skills/define-work/references/shared/current-task-lifecycle.md';
+  for (const skill of ['plan-work', 'implement-ticket', 'verify-work']) pairs.push({ source: lifecycle, destination: `skills/${skill}/references/shared/current-task-lifecycle.md` });
   for (const skill of ['plan-work', 'implement-ticket', 'verify-work']) {
     for (const name of ['contract.md', 'markdown.md']) pairs.push({ source: `skills/define-work/references/ticket-management/${name}`, destination: `skills/${skill}/references/ticket-management/${name}` });
   }

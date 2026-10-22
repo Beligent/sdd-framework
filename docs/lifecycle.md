@@ -36,3 +36,11 @@ when the task is sufficient. Rigorous work retains stronger current-task
 governance without automatically planning later work. When expansion is set to
 ask first, identify consequential concerns and request approval before creating
 deeper design.
+
+The four lifecycle skills compose manually as `define-work`, optional
+`plan-work`, `implement-ticket`, and `verify-work`. `plan-task` is the default
+schema-2 planning scope for current work. `plan-epic` and `plan-project` require
+explicit intent. Stable project context is referenced rather than copied into
+every task, and unrelated discoveries remain future candidates. Verification
+uses the configured testing categories only when their policy and the changed
+risk make them applicable, then leaves evidence suitable for later delivery.

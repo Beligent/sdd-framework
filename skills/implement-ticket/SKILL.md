@@ -26,7 +26,8 @@ documents are needed only when the work makes or depends on a consequential
 architecture decision.
 
 Read [governance](references/shared/governance.md) to establish authorization and
-revision coverage. Read the [ticket contract](references/ticket-management/contract.md)
+revision coverage and the schema-2 [current-task
+lifecycle](references/shared/current-task-lifecycle.md) for scope behavior. Read the [ticket contract](references/ticket-management/contract.md)
 and the configured provider guidance, initially
 [Markdown tickets](references/ticket-management/markdown.md), before reading or
 updating ticket state. An unsupported provider requires a supported adapter or a
@@ -34,8 +35,11 @@ project decision; do not silently create a second backlog.
 
 ## Procedure
 
-1. Resolve the ticket's requirements, specifications, criteria, dependencies and
-   approval references. Confirm readiness and authorization for this exact work.
+1. Resolve the compact task or expanded ticket's existing requirements,
+   specifications, plan, criteria, dependencies and approval references. Confirm
+   readiness and authorization for this exact work. Reuse these sources; do not
+   regenerate specifications or reopen resolved decisions without a real
+   contradiction.
    Existing explicit authorization counts. If a decision is missing, prepare the
    concrete ticket/plan for that decision; continue independent investigation but
    do not implement the unapproved behavior.
@@ -48,10 +52,12 @@ project decision; do not silently create a second backlog.
    Identify a regression test or observable check for changed behavior. Use
    test-driven development when it adds confidence: demonstrate the relevant
    failure, implement the behavior, then refactor with checks passing.
-4. Implement within scope. Preserve unrelated user changes. Handle a material
-   change to approved behavior, criteria, constraints or plan through governance
-   before dependent implementation. Record a genuine blocker with its evidence;
-   do not invent a design decision to bypass it.
+4. Implement within current-task scope and preserve unrelated user changes.
+   Apply the shared lifecycle's feature-drift, future-candidate,
+   decision-significance, and depth-expansion rules. Handle a material change to
+   approved behavior, criteria, constraints or plan through governance before
+   dependent implementation. Record a genuine blocker with its evidence; do not
+   invent a design decision to bypass it.
 5. Run relevant checks and inspect the resulting diff. Review changed trust
    boundaries, error handling, compatibility and documentation. Report unavailable
    checks as unverified, distinguish pre-existing failures from regressions, and
@@ -84,4 +90,5 @@ checks and outcomes, unresolved risks, and the next decision. For a lightweight
 change, this evidence may remain in the ticket. Standard work can hand off to
 `verify-work` when available, but does not depend on that skill being installed.
 Do not mark work accepted or the ticket done without the required real human
-acceptance recorded under the configured policy.
+acceptance recorded under the configured policy. Do not commit, push, or create
+a pull request as part of this skill.

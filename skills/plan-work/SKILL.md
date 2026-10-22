@@ -12,8 +12,9 @@ canonical behavior and tickets rather than silently changing their meaning.
 
 ## Preconditions and inputs
 
-Read applicable instructions, `.beligent/config.json`, and
-[governance](references/shared/governance.md). This skill supports configuration
+Read applicable instructions, `.beligent/config.json`,
+[governance](references/shared/governance.md), and the schema-2
+[current-task lifecycle](references/shared/current-task-lifecycle.md). This skill supports configuration
 `schema_version: 1` and `schema_version: 2`; missing configuration requires setup or an explicitly
 unconfigured proposal without persisted artifacts. Unsupported schemas require
 a separate migration proposal before affected writes.
@@ -25,14 +26,25 @@ Existing explicit authorization for the same scope satisfies its gate. Where
 behavior lacks enough definition, identify the ambiguity and prepare only the
 parts of the plan that do not depend on resolving it.
 
+For schema 2, select planning scope explicitly:
+
+| Mode | Selection rule | Output |
+| --- | --- | --- |
+| `plan-task` | Default for “plan this,” “what next,” a feature request, or work tied to a current ticket | Current-task implementation notes or a PLAN when useful |
+| `plan-epic` | Explicit epic planning intent | Bounded coordination for the selected epic |
+| `plan-project` | Explicit project planning intent or clear developer selection | Project-level planning at the configured depth |
+
+Do not infer `plan-epic` or `plan-project` from ordinary current-task work.
+
 ## Procedure
 
-1. Identify the outcome, current artifact revisions and planning depth. A
+1. Identify the mode, outcome, current artifact revisions and planning depth. A
    lightweight ticket may hold a short plan. For schema-2 light/standard work,
    write a plan only when requested, useful for complexity, needed for
    consequential sequencing or risk, or required by project policy; otherwise a
    compact task may be sufficient. Schema 1 and rigorous schema 2 retain their
-   configured artifact needs.
+   configured artifact needs. If `plan-task` is small or obvious, record concise
+   implementation notes in the task and conclude that no separate PLAN is useful.
 2. Trace the affected system boundaries, data/interface changes, dependencies and
    current test coverage. Compare proportionate options for consequential choices.
    Reuse existing project decisions unless evidence warrants a change.
@@ -53,9 +65,11 @@ parts of the plan that do not depend on resolving it.
    constraints, describe the proposed change and affected approvals; return it to
    management for a scoped decision before dependent implementation. Preserve
    historical approvals and unresolved questions.
-7. Validate and report the plan, ADRs where justified, ticket refinements and
-   remaining implementation-approval needs. This skill produces planning
-   artifacts, not application changes.
+   For schema 2, apply the shared lifecycle's depth-expansion and
+   future-candidate rules.
+7. Validate and report the plan or explicit no-PLAN conclusion, justified ADRs,
+   ticket refinements and remaining implementation-approval needs. This skill
+   produces planning artifacts, not application changes.
 
 ## Technology selection
 

@@ -317,6 +317,41 @@ describe('repository and artifact validation', () => {
     }
   });
 
+  it('packages one current-task lifecycle contract and keeps public skill routing bounded', async () => {
+    const source = 'skills/define-work/references/shared/current-task-lifecycle.md';
+    const lifecycle = await readFile(path.join(root, source), 'utf8');
+    const lifecycleMappings = mappings().filter((entry) => entry.source === source);
+    expect(lifecycleMappings.map((entry) => entry.destination).sort()).toEqual([
+      'skills/implement-ticket/references/shared/current-task-lifecycle.md',
+      'skills/plan-work/references/shared/current-task-lifecycle.md',
+      'skills/verify-work/references/shared/current-task-lifecycle.md',
+    ]);
+    for (const mapping of lifecycleMappings) expect(await readFile(path.join(root, mapping.destination), 'utf8')).toBe(lifecycle);
+
+    const define = await readFile(path.join(root, 'skills/define-work/SKILL.md'), 'utf8');
+    const plan = await readFile(path.join(root, 'skills/plan-work/SKILL.md'), 'utf8');
+    const implement = await readFile(path.join(root, 'skills/implement-ticket/SKILL.md'), 'utf8');
+    const verify = await readFile(path.join(root, 'skills/verify-work/SKILL.md'), 'utf8');
+    const init = await readFile(path.join(root, 'skills/init-project/SKILL.md'), 'utf8');
+    const adopt = await readFile(path.join(root, 'skills/adopt-project/SKILL.md'), 'utf8');
+    const normalized = [lifecycle, define, plan, implement, verify, init, adopt].map((text) => text.replace(/\s+/g, ' '));
+    expect(normalized[0]).toContain('schema 1 retains its profile-based workflow and artifacts');
+    expect(normalized[0]).toContain('Reference that context from the task instead of copying');
+    expect(normalized[1]).toContain('ordinary schema-2 feature request');
+    expect(normalized[1]).toContain('do not infer project planning, a complete backlog, or comprehensive design');
+    expect(normalized[2]).toContain('`plan-task` | Default');
+    expect(normalized[2]).toContain('`plan-project` | Explicit project planning intent');
+    expect(normalized[2]).toContain('no separate PLAN is useful');
+    expect(normalized[3]).toContain('do not regenerate specifications');
+    expect(normalized[0]).toContain('feature-drift, future-candidate, decision-significance, and depth-expansion rules');
+    expect(normalized[3]).toContain("shared lifecycle's feature-drift, future-candidate");
+    expect(normalized[4]).toContain("project's `testing` preferences");
+    expect(normalized[4]).toContain('An available category is not mandatory');
+    expect(normalized[4]).toContain('without rewriting them');
+    expect(normalized[5]).toContain('one concise batch of workflow, testing, and delivery defaults');
+    expect(normalized[6]).toContain('preferences already present in a valid configuration');
+  });
+
   it('rejects duplicate YAML keys and links outside a skill package', async () => {
     expect(() => parseFrontmatter('---\na: 1\na: 2\n---\nbody')).toThrow();
     const dir = await tempdir();
@@ -445,6 +480,14 @@ describe('repository and artifact validation', () => {
       id: 'TICKET-001', kind: 'ticket', title: 'Small change', status: 'todo', readiness: 'ready', priority: 'medium',
       requirements: [], specifications: [], acceptance_criteria: ['TICKET-001/AC-001'], dependencies: [], approval_refs: [], evidence: [],
     }, '# Small change\n\n## Acceptance criteria\n\n### AC-001\n\nThe change has an observable result.\n');
+    expect(await validateProjectRecords(project, config)).toEqual([]);
+  });
+
+  it('keeps existing expanded schema 2 work usable', async () => {
+    const project = path.join(await tempdir(), 'expanded-schema-2');
+    await cp(path.join(root, 'examples/team-task-tracker'), project, { recursive: true });
+    const config = await templateConfig();
+    await writeFile(path.join(project, '.beligent/config.json'), JSON.stringify(config, null, 2));
     expect(await validateProjectRecords(project, config)).toEqual([]);
   });
 

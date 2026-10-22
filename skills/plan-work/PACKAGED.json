@@ -1,6 +1,7 @@
 {
   "generated": true,
   "resources": {
+    "references/shared/current-task-lifecycle.md": "skills/define-work/references/shared/current-task-lifecycle.md",
     "references/shared/governance.md": "skills/define-work/references/shared/governance.md",
     "references/technology/fastapi.md": "skills/implement-ticket/references/technology/fastapi.md",
     "references/technology/nextjs.md": "skills/implement-ticket/references/technology/nextjs.md",

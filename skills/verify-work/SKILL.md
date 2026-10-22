@@ -22,7 +22,8 @@ revision or working diff, applicable approvals, existing test/check evidence,
 and a plan/ADRs where relevant. A lightweight ticket may contain its contract,
 plan and verification; it does not require separate empty artifacts.
 
-Read [governance](references/shared/governance.md), the
+Read [governance](references/shared/governance.md), the schema-2
+[current-task lifecycle](references/shared/current-task-lifecycle.md), the
 [ticket contract](references/ticket-management/contract.md), and the configured
 provider guidance, initially [Markdown tickets](references/ticket-management/markdown.md).
 Check that approvals still cover the implemented behavior, criteria, constraints
@@ -34,14 +35,17 @@ it must not present unapproved work as accepted.
 1. Identify the exact scope and revision under review. Resolve the ticket's stable
    criteria and approved sources. Compare the diff with that contract and note
    unapproved scope, stale approvals, missing links and unresolved dependencies.
-2. Read [review guidance](references/review.md) for the relevant code, security,
-   documentation and maintainability checks. Inspect behavior and the actual
-   evidence rather than trusting a previous agent's summary. Focus security
-   review on changed trust boundaries and stated requirements.
-3. Build a criterion-to-evidence matrix. Use existing trustworthy results where
-   they cover the reviewed revision. Run or reproduce the meaningful missing
-   checks when available and authorized. Record commands/procedures, results and
-   environment limitations. Treat absent, stale or failed evidence honestly.
+2. Read [review guidance](references/review.md) for relevant correctness,
+   maintainability, complexity, speculative abstraction, documentation, and
+   changed trust-boundary checks. Review the diff for current-task scope drift.
+3. For schema 2, read the project's `testing` preferences and select only checks
+   relevant to the task and changed risks. An available category is not mandatory
+   unless policy says `always`; apply conditional values literally. Distinguish
+   automatic checks from manual verification. Build a criterion-to-evidence
+   matrix using the existing stable criteria without rewriting them. Use
+   trustworthy results covering the reviewed revision, and run or reproduce
+   meaningful gaps when available and authorized. Record procedures, results,
+   failures, and environment limitations honestly.
 4. Produce a [verification report](assets/verification-report.md) in the configured
    location, or equivalent sections in a lightweight ticket. Preserve failures,
    unverified criteria, review findings and follow-up work. Separate technical

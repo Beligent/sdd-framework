@@ -36,6 +36,19 @@ before detailed specifications or architecture. Planning refines them through
 the same provider contract. Engineering links to management artifacts instead
 of maintaining another requirements copy.
 
+For schema 2, ordinary work follows a bounded manual composition:
+
+```text
+define-work → plan-work when useful → implement-ticket → verify-work
+```
+
+The [current-task lifecycle](../skills/define-work/references/shared/current-task-lifecycle.md)
+defines shared routing, context inheritance, depth expansion, drift handling,
+and verification selection. It is authored once and packaged into the four
+lifecycle skills. Schema 1 retains the expanded profile-based behavior above.
+Project and epic planning remain available through explicit planning modes; an
+ordinary task does not imply either.
+
 ## Framework and project ownership
 
 Reusable instructions, workflows, templates, guidelines and adapters are versioned

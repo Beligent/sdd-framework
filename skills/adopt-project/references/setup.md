@@ -85,9 +85,9 @@ so the human can review a complete resolution proposal.
   arrays `artifacts` and `approvals`. Preserve implementation and completion
   decisions in every profile. Schema 2 additionally requires bounded workflow
   rigor/design-depth/expansion settings, testing preferences, and Git/delivery
-  policy. Schema-2 workflow rigor is project policy only in this release: the
-  retained profile fields continue to control current ticket readiness and
-  approval behavior. Do not silently drop unknown settings; report unsupported
+  policy. Schema-2 workflow rigor and design depth control current-task behavior
+  and readiness; retained profiles continue to express expanded artifact and
+  approval policy. Do not silently drop unknown settings; report unsupported
   keys as a compatibility decision before affected writes.
 - Every configured location is a nonempty repository-relative POSIX path. Reject
   absolute paths, Windows drive/UNC paths, backslashes, NUL, empty components,
@@ -229,8 +229,8 @@ implementation, or completion and does not publish or modify application code.
   Project config, instruction files, setup state, and artifacts remain unchanged.
 - **Config migration:** compare schema support before affected writes; propose
   an explicit old/new JSON diff, preservation rules, verification, and rollback.
-  Apply after the real human decision. Schema 1 is the only shipped schema;
-  there is no invented migration from an undocumented predecessor.
+  Apply after the real human decision. Schemas 1 and 2 are shipped; do not invent
+  a migration from an undocumented predecessor or unsupported version.
 - **Instruction refresh:** compare the current managed section against its
   recorded baseline before proposing a new section. Matching bytes permit the
   reviewed replacement; local edits require a three-way merge proposal using

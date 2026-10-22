@@ -13,6 +13,9 @@ and an explicitly approved integration plan.
 Read applicable repository instructions. Identify the target root, requested
 scope, selected assistant(s), project technologies, desired profile, and known
 requirements or backlogs. Do not assume adoption replaces existing processes.
+Reuse workflow, testing, and Git/delivery preferences already present in a valid
+configuration. When schema-2 configuration is absent, present the bundled
+defaults as one concise batch and ask only for material deviations.
 
 ## Procedure
 

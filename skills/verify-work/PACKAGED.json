@@ -1,6 +1,7 @@
 {
   "generated": true,
   "resources": {
+    "references/shared/current-task-lifecycle.md": "skills/define-work/references/shared/current-task-lifecycle.md",
     "references/shared/governance.md": "skills/define-work/references/shared/governance.md",
     "references/ticket-management/contract.md": "skills/define-work/references/ticket-management/contract.md",
     "references/ticket-management/markdown.md": "skills/define-work/references/ticket-management/markdown.md"
