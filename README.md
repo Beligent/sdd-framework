@@ -19,7 +19,7 @@ The primary distribution path is the public Git repository and the external
 the final repository owner or name differs:
 
 ```sh
-npx skills@1.7.2 add beligent/sdd --skill '*' --agent codex --copy -y
+npx skills@1.7.2 add Beligent/sdd-framework --skill '*' --agent codex --copy -y
 ```
 
 Choose the intended agent, for example `claude-code`, `github-copilot`, or
@@ -96,7 +96,7 @@ not enforce human approval as a security boundary or certify application tests.
 - [Installation and setup](docs/installation.md), [existing-project adoption](docs/adoption.md), and [agent compatibility](docs/agents.md)
 - [Architecture](docs/architecture.md), [lifecycle](docs/lifecycle.md), [artifact model](docs/artifact-model.md), and [terminology](docs/terminology.md)
 - [Customization](docs/customization.md), [maintenance](docs/maintenance.md), and [CLI validation](docs/cli.md)
-A worked task-tracker example is maintained under `examples/` in the source repository.
+  A worked task-tracker example is maintained under `examples/` in the source repository.
 
 The framework version is recorded in `package.json` and checked against
 [`VERSION`](VERSION). The project is licensed under [MIT](LICENSE); see
