@@ -12,6 +12,54 @@ affected writes. Use configured paths, project conventions and technologies.
 Read only resources relevant to the requested workflow. Do not replace existing
 requirements or infer permission to alter unrelated project settings.
 
+## Incremental specification principles
+
+Beligent SDD optimizes for the smallest amount of specification required to
+confidently implement, verify, review, and deliver the next valuable increment.
+It expands specification only when complexity, risk, irreversibility, or an
+explicit developer request justifies doing so.
+
+Prefer current-task development over speculative project-wide planning. Once
+the current increment has enough definition to proceed, continue its work
+through implementation and relevant verification before defining or implementing
+later work. Project-wide planning remains available when the developer requests
+it or approves expansion after a consequential need is identified.
+
+### Specification stop rule
+
+Specification is sufficient when the current increment is unambiguous enough to
+implement, its acceptance criteria are testable, consequential risks are
+resolved or explicitly accepted, no unresolved decision blocks implementation,
+and remaining choices are reversible implementation details. Future behavior
+that is not needed for the increment must be out of scope or explicitly
+deferred. When these conditions are met, begin implementation; do not continue
+specifying hypothetical work.
+
+### Decisions, deferrals, and scope
+
+Create a formal decision only when a choice blocks implementation, is expensive
+or risky to reverse, affects security, privacy, compliance, or a public
+contract, affects multiple near-term tasks, or could materially damage the
+architecture if wrong. Treat ordinary local and reversible implementation
+choices as local: do not create an ADR or approval cycle for naming, file
+placement, small component decomposition, compatible test-runner selection, or
+other routine details.
+
+Do not specify behavior or design architecture solely because a future version
+may need it. When a concern does not affect the current increment, name it as a
+brief deferral and stop; do not turn deferred work into a detailed design.
+
+Newly discovered functionality outside the approved task normally becomes a
+future candidate rather than expanding the current implementation. Expand the
+current task only when needed to meet its criteria, resolve a directly blocking
+defect, satisfy a relevant project requirement, or preserve correctness or
+security.
+
+When two or more attempted fixes address symptoms without resolving the failing
+behavior, stop adding symptom patches and perform root-cause diagnosis before
+another implementation attempt. Record the observed failure and diagnosis need
+honestly; this rule does not authorize unrelated code changes.
+
 ## Profiles and independent entry
 
 The selected profile names required artifact kinds and human decisions.

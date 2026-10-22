@@ -2,17 +2,17 @@
 
 ## Current TypeScript tooling and npm package checks
 
-Date: 2026-10-18. Framework/package version: 0.1.0. Configuration schema: 1.
+Date: 2026-10-22. Framework/package version: 0.1.0. Configuration schema: 1.
 
 The TypeScript migration preserves the original validation scenarios and moves
-framework-maintainer tooling out of Python. `tests/framework.test.ts` has 37
+framework-maintainer tooling out of Python. `tests/framework.test.ts` has 40
 tests covering config safety, deterministic packaging, Markdown/ticket graph
 validation, CLI behavior, and package version agreement.
 
 | Check | Observed result |
 | --- | --- |
 | TypeScript typecheck and ESLint | Passed |
-| Vitest | 37 tests passed |
+| Vitest | 40 tests passed after Increment 1 validation |
 | Shared resource drift and full framework validation | Passed |
 | `VERSION` and `package.json` agreement | Passed at 0.1.0 |
 | `npm pack --dry-run` allowlist check | Passed; 82 intentional files |
@@ -22,6 +22,10 @@ validation, CLI behavior, and package version agreement.
 The package remains unpublished. The `beligent/sdd` GitHub source and npm scope
 are provisional metadata/documentation values and must match the actual public
 repository and npm organization before release.
+
+Increment 1 adds canonical governance principles and schema-1 characterization
+coverage only. It does not change configuration, profile defaults, artifact
+formats, skill count, ticket readiness, approvals, or runtime workflow behavior.
 
 ## Initial MVP validation report (historical)
 

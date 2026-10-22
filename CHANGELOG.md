@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+Established incremental-specification governance principles and added schema-1
+characterization coverage. Schema 1 behavior, configuration, profiles, public
+skills, artifact formats, readiness rules, and approval requirements are
+unchanged.
+
 ## 0.1.0 — 2026-10-18
 
 Initial framework: six portable skills, four management workflow entry points,

@@ -77,6 +77,17 @@ describe('consumer configuration validation', () => {
     expect(validateConfig(config).some((issue) => issue.message.includes('implementation and completion'))).toBe(true);
   });
 
+  it('preserves schema 1 standard defaults and rejects vNext configuration fields', async () => {
+    const config = await templateConfig();
+    expect(config.schema_version).toBe(1);
+    expect(config.profile).toBe('standard');
+    expect(config.profiles.standard).toEqual({
+      artifacts: ['overview', 'requirements', 'specification', 'plan', 'ticket'],
+      approvals: ['scope', 'implementation', 'completion'],
+    });
+    expect(validateConfig({ ...config, workflow: { rigor: 'standard' } }).length).toBeGreaterThan(0);
+  });
+
   it('rejects duplicate keys at any JSON depth and invalid JSON constants', () => {
     expect(() => parseConfig('{"a":1,"a":2}')).toThrow('Duplicate JSON key');
     expect(() => parseConfig('{"a":{"b":1,"b":2}}')).toThrow('Duplicate JSON key');
@@ -217,6 +228,24 @@ describe('repository and artifact validation', () => {
     expect(await validateRepository(root)).toEqual([]);
   });
 
+  it('keeps incremental principles canonical and synchronizes their packaged copies', async () => {
+    const source = 'skills/define-work/references/shared/governance.md';
+    const governance = await readFile(path.join(root, source), 'utf8');
+    const normalizedGovernance = governance.replace(/\s+/g, ' ');
+    for (const principle of [
+      'smallest amount of specification',
+      'Specification stop rule',
+      'Treat ordinary local and reversible implementation choices as local',
+      'solely because a future version may need it',
+      'future candidate rather than expanding the current implementation',
+      'perform root-cause diagnosis',
+    ]) expect(normalizedGovernance).toContain(principle);
+
+    for (const mapping of mappings().filter((entry) => entry.source === source)) {
+      expect(await readFile(path.join(root, mapping.destination), 'utf8')).toBe(governance);
+    }
+  });
+
   it('rejects duplicate YAML keys and links outside a skill package', async () => {
     expect(() => parseFrontmatter('---\na: 1\na: 2\n---\nbody')).toThrow();
     const dir = await tempdir();
@@ -291,6 +320,17 @@ describe('repository and artifact validation', () => {
     expect((await validateProjectRecords(project, config)).some((error) => error.includes('string list'))).toBe(true);
     await writeFile(ticketPath, original.replace('status: todo', 'status: done'));
     expect((await validateProjectRecords(project, config)).some((error) => error.includes('done requires'))).toBe(true);
+  });
+
+  it('keeps schema 1 lightweight tickets ready with local criteria and no separate requirement or specification', async () => {
+    const project = await tempdir();
+    const config = await templateConfig();
+    config.profile = 'lightweight';
+    await writeArtifact(path.join(project, config.tickets.paths.tickets, 'TICKET-001.md'), {
+      id: 'TICKET-001', kind: 'ticket', title: 'Small isolated change', status: 'todo', readiness: 'ready', priority: 'low',
+      requirements: [], specifications: [], acceptance_criteria: ['TICKET-001/AC-001'], dependencies: [], approval_refs: [], evidence: [],
+    }, '# Small isolated change\n\n## Acceptance criteria\n\n### AC-001\n\nThe change has an observable result.\n');
+    expect(await validateProjectRecords(project, config)).toEqual([]);
   });
 
   it('reports missing requirements/criteria, unlinked spec criteria, duplicate IDs and boolean revisions', async () => {
