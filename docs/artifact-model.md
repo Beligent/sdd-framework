@@ -11,6 +11,7 @@ Project artifacts are Markdown, stored at the paths chosen in
 | ADR | [adr.md](../skills/plan-work/assets/adr.md) | Consequential technical decision and alternatives |
 | Epic | [epic.md](../skills/define-work/assets/epic.md) | Groups an outcome and child tickets |
 | Development ticket | [ticket.md](../skills/define-work/assets/ticket.md) | Actionable approved scope linked to behavior and verification |
+| Schema-2 compact task | [compact-task.md](../skills/define-work/assets/compact-task.md) | A light/standard current-task ticket that combines sufficient objective, behavior, criteria and relevant verification in one artifact |
 | Implementation plan | [implementation-plan.md](../skills/plan-work/assets/implementation-plan.md) | Architecture, sequence, dependencies and test approach |
 | Verification report | [verification-report.md](../skills/verify-work/assets/verification-report.md) | Criteria mapped to observed evidence and gaps |
 | Approval/change record | [approval-record.md](../skills/define-work/assets/approval-record.md) | A real human decision covering specific scope/revisions |
@@ -33,6 +34,12 @@ the applicable criteria instead of creating an alternative behavior definition.
 Verification references the same criteria and records actual commands/review
 procedures, results and limits. A lightweight ticket may define its own
 `TICKET-001/AC-001` criterion headings and include its plan/evidence inline.
+
+Schema-2 light and standard work may instead use a compact task. It is an
+additional ticket representation, never an automatic rewrite of expanded
+artifacts. Include only relevant sections; the readiness stop rule requires an
+objective, behavior, testable criteria, no unresolved blocker, and an explicit
+resolution, acceptance, or escalation for any consequential risk.
 
 ## Readiness, lifecycle and decisions
 

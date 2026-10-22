@@ -28,8 +28,11 @@ parts of the plan that do not depend on resolving it.
 ## Procedure
 
 1. Identify the outcome, current artifact revisions and planning depth. A
-   lightweight ticket may hold a short plan; standard work uses the configured
-   plans directory and [implementation-plan template](assets/implementation-plan.md).
+   lightweight ticket may hold a short plan. For schema-2 light/standard work,
+   write a plan only when requested, useful for complexity, needed for
+   consequential sequencing or risk, or required by project policy; otherwise a
+   compact task may be sufficient. Schema 1 and rigorous schema 2 retain their
+   configured artifact needs.
 2. Trace the affected system boundaries, data/interface changes, dependencies and
    current test coverage. Compare proportionate options for consequential choices.
    Reuse existing project decisions unless evidence warrants a change.
@@ -80,7 +83,7 @@ covers the criteria and relevant failure paths, dependencies can be sequenced,
 and proposed changes fit project constraints. Review data/compatibility/security
 risks where the work creates them; record unknowns and verification limits.
 Detect conflicting ticket revisions before mutations. Do not mark tickets ready
-while profile-specific behavior or planning needs remain unresolved.
+while applicable behavior, blockers, risks, or planning needs remain unresolved.
 
 ## Gates
 

@@ -24,3 +24,15 @@ A ready ticket is adequately planned. A ticket in `review` has implementation
 evidence awaiting verification/acceptance. `done` requires verified criteria and
 the configured completion decision. Failing or unrun checks remain visible;
 do not manufacture evidence to advance a status.
+
+## Schema-2 compact readiness
+
+Schema 1 retains the profile behavior above. In schema 2, light and standard
+current-task work may use one compact task with a clear objective, unambiguous
+behavior, testable criteria, no unresolved blocking questions, and consequential
+risks resolved, accepted, or escalated. It may contain only sections relevant to
+the work. Separate requirement, specification, or plan artifacts are optional
+when the task is sufficient. Rigorous work retains stronger current-task
+governance without automatically planning later work. When expansion is set to
+ask first, identify consequential concerns and request approval before creating
+deeper design.

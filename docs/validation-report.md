@@ -5,17 +5,17 @@
 Date: 2026-10-22. Framework/package version: 0.1.0. Configuration schemas: 1 and 2.
 
 The TypeScript migration preserves the original validation scenarios and moves
-framework-maintainer tooling out of Python. `tests/framework.test.ts` has 51
+framework-maintainer tooling out of Python. `tests/framework.test.ts` has 55
 tests covering config safety, deterministic packaging, Markdown/ticket graph
 validation, CLI behavior, and package version agreement.
 
 | Check | Observed result |
 | --- | --- |
 | TypeScript typecheck and ESLint | Passed |
-| Vitest | 51 tests passed after Increment 2 validation |
+| Vitest | 55 tests passed after Increment 3 validation |
 | Shared resource drift and full framework validation | Passed |
 | `VERSION` and `package.json` agreement | Passed at 0.1.0 |
-| `npm pack --dry-run` allowlist check | Passed; 83 intentional files |
+| `npm pack --dry-run` allowlist check | Passed; 84 intentional files |
 | Packed CLI smoke | Extracted package printed version and validated the worked example configuration |
 | npm dependency audit | Zero vulnerabilities after upgrading the test runner |
 
@@ -24,10 +24,10 @@ are provisional metadata/documentation values and must match the actual public
 repository and npm organization before release.
 
 Increment 1 adds canonical governance principles and schema-1 characterization
-coverage only. Increment 2 adds schema 2 policy configuration and an explicit
-migration path. Neither increment changes schema-1 behavior, ticket readiness,
-approvals, artifact formats, skill count, testing execution, or delivery
-automation.
+coverage only. Increment 2 adds schema-2 policy configuration and an explicit
+migration path. Increment 3 adds schema-2 compact light/standard tasks and
+stop-rule readiness. Schema-1 behavior, skill count, testing execution, and
+delivery automation remain unchanged.
 
 ## Initial MVP validation report (historical)
 

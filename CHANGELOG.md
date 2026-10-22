@@ -8,9 +8,10 @@ skills, artifact formats, readiness rules, and approval requirements are
 unchanged.
 
 Added schema 2 project workflow, testing, and delivery policy with an explicit
-preview-first schema-1 migration. Schema-1 behavior remains unchanged; schema-2
-policy does not yet alter artifact, readiness, approval, testing, or delivery
-automation.
+preview-first schema-1 migration. Schema 2 now supports compact light/standard
+tasks and stop-rule readiness while preserving schema-1 behavior and expanded
+artifacts. Testing and delivery policy do not yet automate checks, commits,
+pushes, or pull requests.
 
 ## 0.1.0 — 2026-10-18
 

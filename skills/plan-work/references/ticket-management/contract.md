@@ -26,12 +26,30 @@ ships in the MVP. Read its [provider instructions](markdown.md) when selected.
 | `evidence` | List of verification IDs, project-relative evidence links or authoritative URLs; describe the result and limits in scope/details |
 | scope/details | Body content: expected behavior, exclusions, assumptions, questions, plan references and relevant verification/change notes |
 
-Every list field is present, including when empty. Do not fabricate IDs for
-missing documents. Preliminary records may contain explicit traceability gaps;
-ready standard records need valid requirement/specification criterion references
-and a linked implementation plan. Ready lightweight tickets may keep behavior,
-criteria and a short plan in their body. Epic scope/details identify child IDs;
+Every list field is present, including when empty, for this expanded normalized
+record. Do not fabricate IDs for missing documents. Schema-1 ready standard
+records need valid requirement/specification criterion references and a linked
+implementation plan. Ready lightweight tickets may keep behavior, criteria and
+a short plan in their body. Epic scope/details identify child IDs;
 `dependencies` means prerequisites, not membership.
+
+## Schema-2 compact task
+
+A schema-2 `light` or `standard` Markdown ticket may instead use the compact
+task form: `id`, `status`, `rigor`, and `design_depth` frontmatter, with optional
+`kind: ticket` and `readiness`. Its body holds the objective, expected behavior,
+testable `AC-001` style criteria, and only relevant constraints, exclusions,
+questions, verification, notes, or evidence. Separate requirement,
+specification, plan, and approval references are not required solely because
+their concepts apply. A preliminary compact task may name blocking questions.
+An omitted or `ready` readiness value requires the stop rule: clear objective
+and behavior, testable criteria, no unresolved blocker, and consequential risks
+resolved, accepted, or escalated. Missing irrelevant sections are valid.
+
+Existing expanded records remain valid and are reused when sufficient. Rigorous
+schema-2 work uses the expanded record and current-task governance. Provider
+implementations may normalize either stored representation when returning a
+record; the storage form does not change logical identity or conflict handling.
 
 Provider metadata accompanies reads and writes but is not logical identity:
 `locator` identifies authoritative storage, and `content_revision` identifies the
@@ -60,9 +78,10 @@ are explicit outcomes, never silently approximated or written to a fallback copy
 
 ## Lifecycle, readiness and approval
 
-- `todo` describes queued work, including preliminary drafts. Set `ready` only
-  when profile-specific behavior and planning needs are met; this grants no
-  human approval.
+- `todo` describes queued work, including preliminary drafts. In schema 1 and
+  rigorous schema 2, set `ready` only when profile-specific behavior and
+  planning needs are met. In light/standard schema 2, a compact task meeting
+  the stop rule is ready. Readiness grants no human approval.
 - Enter `in-progress` only when work is ready, prerequisites are satisfied or
   explicitly waived, and the current ticket/plan scope has implementation
   authorization. An epic summarizes child progress; it does not authorize them.

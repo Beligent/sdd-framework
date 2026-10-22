@@ -28,10 +28,13 @@ Schema 2 separates workflow rigor from design-ahead depth. `workflow.rigor` is
 assistant must ask before expanding beyond the selected depth. New projects use
 `standard`, `current-task`, and `true`.
 
-This increment stores policy only. The existing `profile` and `profiles` fields
-continue to govern artifact, readiness, and approval behavior until a later
-lifecycle increment changes that contract. Keep workflow, testing, and delivery
-preferences in project configuration rather than repeating them in task records.
+Schema 2 applies rigor and design depth to task readiness. Light and standard
+current-task work can use a compact task when it meets the stop rule, without
+separate requirement, specification, or plan artifacts. Rigorous work retains
+stronger current-task governance. Existing expanded artifacts remain valid and
+should be reused when sufficient. `ask_before_expansion: true` requires the
+assistant to ask before producing design beyond the selected depth. Keep testing
+and delivery preferences in project configuration rather than task records.
 
 `testing` states project preferences for lint, typecheck, unit, integration,
 E2E, accessibility, security, performance, TDD, and manual validation. `git`

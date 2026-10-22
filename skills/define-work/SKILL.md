@@ -33,7 +33,7 @@ and open questions in a draft.
 | Elicit or refine requirements/PRD | [requirements workflow](references/workflows/requirements.md) | [requirements](assets/requirements.md) |
 | Specify observable behavior and interfaces | [specification workflow](references/workflows/specification.md) | [specification](assets/specification.md) |
 | Group outcomes into epics and candidate tickets | [epics workflow](references/workflows/epics.md) | [epic](assets/epic.md) |
-| Create, find, refine, prioritize, link or transition tickets | [tickets workflow](references/workflows/tickets.md) | [ticket](assets/ticket.md) |
+| Create, find, refine, prioritize, link or transition tickets | [tickets workflow](references/workflows/tickets.md) | [compact task](assets/compact-task.md) or [ticket](assets/ticket.md) |
 
 Discovery means inspecting the requested outcome, users, evidence and constraints;
 it is part of the selected route. It is not an extra prerequisite workflow.
@@ -62,8 +62,9 @@ define-work, workflow tickets, to refine TICKET-003 using PLAN-001.”
 
 Return the requested requirements/specification artifact, normalized epic/ticket
 records, or query results. Preliminary tickets may precede detailed architecture
-and completed specifications. Preserve missing references explicitly; require the
-selected profile's behavioral references and planning needs before `ready`.
+and completed specifications. For schema-2 light/standard work, a compact task
+meeting the governance stop rule is sufficient before `ready`; schema 1 and
+rigorous schema 2 retain their profile-based needs.
 
 Check unique stable IDs, resolvable references, observable acceptance criteria,
 scope exclusions, dependency validity and consistency with existing decisions.

@@ -19,9 +19,11 @@ initialize or reconfigure the project implicitly.
 
 Required inputs are a ticket, its acceptance criteria and linked behavioral
 contract, applicable implementation authorization, and any existing plan. A
-standard-profile ticket needs its approved implementation plan; a lightweight
-ticket may contain a short plan itself. Architecture documents are needed only
-when the work makes or depends on a consequential architecture decision.
+schema-2 light/standard compact task that satisfies the stop rule supplies its
+own behavioral contract and needs no separate plan solely for implementation.
+Schema 1 and rigorous schema 2 retain their profile-based inputs. Architecture
+documents are needed only when the work makes or depends on a consequential
+architecture decision.
 
 Read [governance](references/shared/governance.md) to establish authorization and
 revision coverage. Read the [ticket contract](references/ticket-management/contract.md)

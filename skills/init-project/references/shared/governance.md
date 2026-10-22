@@ -9,10 +9,10 @@ Read applicable project instructions and `.beligent/config.json`. Skills support
 configuration schemas 1 and 2. Missing configuration permits investigation and a
 setup proposal; unsupported schemas need a separately reviewed migration before
 affected writes. Use configured paths, project conventions and technologies.
-Schema-2 workflow, testing, and delivery settings are project context. Until a
-later lifecycle increment changes the contract, the existing profile fields
-continue to determine artifact, readiness, and approval behavior. Read only
-resources relevant to the requested workflow. Do not replace existing
+Schema-2 workflow settings determine task depth and readiness; schema 1 keeps
+its existing profile-based artifact, readiness, and approval behavior. Testing
+and delivery settings remain project context until their later lifecycle work.
+Read only resources relevant to the requested workflow. Do not replace existing
 requirements or infer permission to alter unrelated project settings.
 
 ## Incremental specification principles
@@ -37,6 +37,22 @@ and remaining choices are reversible implementation details. Future behavior
 that is not needed for the increment must be out of scope or explicitly
 deferred. When these conditions are met, begin implementation; do not continue
 specifying hypothetical work.
+
+### Schema-2 task depth
+
+For schema-2 `light` and `standard` work, a compact task is sufficient when it
+satisfies the stop rule. Reuse an existing expanded requirement, specification
+or plan when it already supplies needed information; do not create a compact
+duplicate or expand it to satisfy a checklist. A plan is useful only when it is
+requested, the work is complex, consequential sequencing or risk requires it,
+or project policy requires it. `rigorous` work retains stronger current-task
+artifacts and approvals, while `rigorous + current-task` never means planning
+the whole project ahead.
+
+When `ask_before_expansion` is true, identify a consequential concern that lies
+beyond the selected depth and ask whether to expand before drafting deeper
+design. Name ordinary deferred concerns briefly. Do not generate near-term or
+comprehensive design before approval.
 
 ### Decisions, deferrals, and scope
 

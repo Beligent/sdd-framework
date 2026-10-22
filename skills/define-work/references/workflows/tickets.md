@@ -12,17 +12,23 @@ conflict detection and serialization.
 1. For a query, read/list/filter through the provider and report actual matches,
    missing IDs or unsupported filters. Do not create artifacts as a side effect.
 2. For creation, check existing records for duplicate scope, then form one useful
-   deliverable with criteria, explicit exclusions and unresolved questions. Use
-   `kind: ticket`, a `TICKET-001` style ID, `todo` and `preliminary` initially.
+   deliverable with criteria, explicit exclusions and unresolved questions. For
+   schema-2 light/standard current-task work, use the [compact task
+   template](../../assets/compact-task.md) when it satisfies the stop rule;
+   choose the expanded normalized record when existing traceability needs it.
+   Use `TICKET-001` style IDs, `todo`, and `preliminary` while a blocker remains.
 3. For refinement, read the current record and its content revision. Compare
    requirements/specifications and any technical plan; update scope, criterion
    references, dependencies, priority and test approach where justified. Record
    assumptions or changes in scope/details. Do not silently edit canonical
    behavior to fit a proposed solution.
 4. For dependency linking, verify referenced records and reject self-links/cycles.
-   For status transitions, satisfy contract preconditions. Use `ready` only when
-   profile-specific planning needs and behavioral references are satisfied;
-   readiness never substitutes for implementation approval.
+   For status transitions, satisfy contract preconditions. Schema-2 light and
+   standard compact tasks become ready when their objective, behavior and
+   testable criteria are clear, blockers are resolved, and consequential risks
+   are resolved, accepted, or escalated. Schema 1 and rigorous schema 2 retain
+   profile-specific readiness. Readiness never substitutes for implementation
+   approval.
 5. Apply changes against the expected content revision and read back the result.
    Stop and report conflicts, unsupported operations or broken references.
    Apply [change control](../change-control.md) to material scope/plan changes.
@@ -30,5 +36,7 @@ conflict detection and serialization.
 Output: query results or updated normalized records with IDs, locators and content
 revisions. Report unresolved readiness/approval blockers separately from status.
 Validate acceptance criteria can be checked, missing references are explicit for
-preliminary records, and ready records meet the selected profile. Do not mark
-`done` without verified evidence and the required human completion decision.
+preliminary records, and ready records meet their applicable readiness rule. If
+`ask_before_expansion` is true, ask before drafting deeper design for a concern
+outside selected depth. Do not mark `done` without verified evidence and the
+required human completion decision.

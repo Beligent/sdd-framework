@@ -308,6 +308,8 @@ describe('repository and artifact validation', () => {
       'solely because a future version may need it',
       'future candidate rather than expanding the current implementation',
       'perform root-cause diagnosis',
+      'When `ask_before_expansion` is true',
+      'compact task is sufficient',
     ]) expect(normalizedGovernance).toContain(principle);
 
     for (const mapping of mappings().filter((entry) => entry.source === source)) {
@@ -399,6 +401,50 @@ describe('repository and artifact validation', () => {
       id: 'TICKET-001', kind: 'ticket', title: 'Small isolated change', status: 'todo', readiness: 'ready', priority: 'low',
       requirements: [], specifications: [], acceptance_criteria: ['TICKET-001/AC-001'], dependencies: [], approval_refs: [], evidence: [],
     }, '# Small isolated change\n\n## Acceptance criteria\n\n### AC-001\n\nThe change has an observable result.\n');
+    expect(await validateProjectRecords(project, config)).toEqual([]);
+  });
+
+  it('accepts a schema 2 standard compact task when the stop rule is met', async () => {
+    const project = await tempdir();
+    const config = await templateConfig();
+    await writeArtifact(path.join(project, config.tickets.paths.tickets, 'TICKET-012.md'), {
+      id: 'TICKET-012', status: 'todo', rigor: 'standard', design_depth: 'current-task',
+    }, '# Contact page\n\n## Objective\n\nLet customers contact the team.\n\n## Behavior\n\nExpose a public contact route.\n\n## Acceptance criteria\n\n### AC-001\n\nThe route is reachable from navigation.\n\n## Verification\n\n- Run the relevant UI checks.\n');
+    expect(await validateProjectRecords(project, config)).toEqual([]);
+  });
+
+  it('keeps schema 2 compact blockers preliminary and rejects them as ready', async () => {
+    const project = await tempdir();
+    const config = await templateConfig();
+    const file = path.join(project, config.tickets.paths.tickets, 'TICKET-012.md');
+    const metadata = { id: 'TICKET-012', status: 'todo', rigor: 'standard', design_depth: 'current-task', readiness: 'ready' };
+    const body = '# Contact page\n\n## Objective\n\nLet customers contact the team.\n\n## Behavior\n\nExpose a public contact route.\n\n## Acceptance criteria\n\n### AC-001\n\nThe route is reachable.\n\n## Blocking questions\n\nWhich contact provider is approved?\n';
+    await writeArtifact(file, metadata, body);
+    expect((await validateProjectRecords(project, config)).some((error) => error.includes('unresolved blocking questions'))).toBe(true);
+    await writeArtifact(file, { ...metadata, readiness: 'preliminary' }, body);
+    expect(await validateProjectRecords(project, config)).toEqual([]);
+  });
+
+  it('preserves schema 1 compact-task rejection and requires expanded artifacts for schema 2 rigorous work', async () => {
+    const project = await tempdir();
+    const body = '# Contact page\n\n## Objective\n\nLet customers contact the team.\n\n## Behavior\n\nExpose a public contact route.\n\n## Acceptance criteria\n\n### AC-001\n\nThe route is reachable.\n';
+    const metadata = { id: 'TICKET-012', status: 'todo', rigor: 'standard', design_depth: 'current-task' };
+    const schema1 = await schema1Config();
+    await writeArtifact(path.join(project, schema1.tickets.paths.tickets, 'TICKET-012.md'), metadata, body);
+    expect((await validateProjectRecords(project, schema1)).some((error) => error.includes('normalized ticket contract'))).toBe(true);
+    const schema2 = await templateConfig();
+    schema2.workflow.rigor = 'rigorous';
+    await writeArtifact(path.join(project, schema2.tickets.paths.tickets, 'TICKET-012.md'), { ...metadata, rigor: 'rigorous' }, body);
+    expect((await validateProjectRecords(project, schema2)).some((error) => error.includes('requires expanded artifacts'))).toBe(true);
+  });
+
+  it('lets schema 2 standard expanded tickets use local criteria without separate requirement or specification links', async () => {
+    const project = await tempdir();
+    const config = await templateConfig();
+    await writeArtifact(path.join(project, config.tickets.paths.tickets, 'TICKET-001.md'), {
+      id: 'TICKET-001', kind: 'ticket', title: 'Small change', status: 'todo', readiness: 'ready', priority: 'medium',
+      requirements: [], specifications: [], acceptance_criteria: ['TICKET-001/AC-001'], dependencies: [], approval_refs: [], evidence: [],
+    }, '# Small change\n\n## Acceptance criteria\n\n### AC-001\n\nThe change has an observable result.\n');
     expect(await validateProjectRecords(project, config)).toEqual([]);
   });
 

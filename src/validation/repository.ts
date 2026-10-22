@@ -2,9 +2,10 @@ import { readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { parseDocument } from 'yaml';
 import { skills, syncAssets } from '../packaging/sync-assets.js';
-import { loadConfig, validateConfig, type ProjectConfig } from './config.js';
+import { loadConfig, validateConfig, type ProjectConfig, type Schema2ProjectConfig } from './config.js';
 
 const ticketFields = ['id', 'kind', 'title', 'status', 'readiness', 'priority', 'requirements', 'specifications', 'acceptance_criteria', 'dependencies', 'approval_refs', 'evidence'];
+const compactTaskFields = ['id', 'kind', 'status', 'readiness', 'rigor', 'design_depth'];
 const listFields = ['requirements', 'specifications', 'acceptance_criteria', 'dependencies', 'approval_refs', 'evidence'];
 const statusValues = ['todo', 'in-progress', 'blocked', 'review', 'done', 'cancelled'];
 type RecordValue = Record<string, unknown>;
@@ -23,6 +24,37 @@ export function parseFrontmatter(text: string): { data: RecordValue; body: strin
 
 function isRecord(value: unknown): value is RecordValue { return typeof value === 'object' && value !== null && !Array.isArray(value); }
 function prose(text: string): string { return text.replace(/^```[^\n]*\n[\s\S]*?^```[^\n]*(?:\n|$)/gm, ''); }
+
+function section(body: string, title: string): string | undefined {
+  const match = new RegExp(`^##\\s+${title}\\s*$\\n([\\s\\S]*?)(?=^##\\s+|\\s*$)`, 'im').exec(body);
+  return match?.[1]?.trim();
+}
+
+function compactTaskIssues(id: string, data: RecordValue, body: string, config: Schema2ProjectConfig): string[] {
+  const errors: string[] = [];
+  if (Object.keys(data).some((field) => !compactTaskFields.includes(field))) errors.push(`${id}: fields differ from compact task contract`);
+  if (data.kind !== undefined && data.kind !== 'ticket') errors.push(`${id}: compact task kind must be ticket`);
+  if (!statusValues.includes(String(data.status))) errors.push(`${id}: invalid compact task status`);
+  if (!['light', 'standard', 'rigorous'].includes(String(data.rigor)) || !['current-task', 'near-term', 'comprehensive'].includes(String(data.design_depth))) errors.push(`${id}: invalid compact task workflow metadata`);
+  if (data.rigor !== config.workflow.rigor || data.design_depth !== config.workflow.design_depth) errors.push(`${id}: compact task workflow metadata must match project workflow`);
+  if (data.rigor === 'rigorous') errors.push(`${id}: rigorous schema-2 work requires expanded artifacts`);
+  if (data.readiness !== undefined && !['preliminary', 'ready'].includes(String(data.readiness))) errors.push(`${id}: invalid compact task readiness`);
+  const objective = section(body, 'Objective');
+  const behavior = section(body, 'Behavior');
+  const criteria = section(body, 'Acceptance criteria');
+  const criterionHeadings = criteria?.match(/^#{3,6}\s+AC-\d+(?:\s|$)/gm) ?? [];
+  const questions = section(body, 'Blocking questions') ?? section(body, 'Open questions');
+  const risks = section(body, 'Consequential risks');
+  const evidence = section(body, 'Evidence') ?? section(body, 'Results');
+  const ready = data.readiness !== 'preliminary';
+  if (ready && !objective) errors.push(`${id}: compact task needs a clear objective`);
+  if (ready && !behavior) errors.push(`${id}: compact task needs expected behavior`);
+  if (ready && criterionHeadings.length === 0) errors.push(`${id}: compact task needs testable acceptance criteria`);
+  if (ready && questions && !/^(none|n\/?a|no blocking questions)\.?$/i.test(questions)) errors.push(`${id}: unresolved blocking questions prevent readiness`);
+  if (ready && risks && !/\b(resolved|accepted|escalated)\b/i.test(risks)) errors.push(`${id}: consequential risks must be resolved, accepted, or escalated`);
+  if (data.status === 'done' && (!ready || !evidence)) errors.push(`${id}: done compact task requires ready work and evidence`);
+  return errors;
+}
 
 export async function localLinkErrors(file: string, boundary?: string): Promise<string[]> {
   const text = prose(await readFile(file, 'utf8'));
@@ -94,6 +126,11 @@ export async function validateProjectRecords(projectRoot: string, config: Projec
   for (const [id, record] of records) {
     if (!id.startsWith('TICKET-') && !id.startsWith('EPIC-')) continue;
     const { data } = record;
+    const compact = config.schema_version === 2 && id.startsWith('TICKET-') && ('rigor' in data || 'design_depth' in data);
+    if (compact) {
+      errors.push(...compactTaskIssues(id, data, record.body, config));
+      continue;
+    }
     if (Object.keys(data).sort().join('|') !== [...ticketFields].sort().join('|')) errors.push(`${id}: fields differ from normalized ticket contract`);
     const expectedKind = id.startsWith('TICKET-') ? 'ticket' : 'epic';
     if (data.kind !== expectedKind || typeof data.title !== 'string' || !data.title.trim()) errors.push(`${id}: invalid kind/title`);
@@ -108,7 +145,8 @@ export async function validateProjectRecords(projectRoot: string, config: Projec
           const [artifact, criterion, extra] = value.split('/');
           if (!artifact || !criterion || extra !== undefined || !/^AC-\d+$/.test(criterion) || !records.has(artifact)) { errors.push(`${id}: unresolved acceptance criterion ${value}`); continue; }
           const localLightweight = artifact === id && !configProfile?.artifacts.includes('specification');
-          if (!(Array.isArray(data.specifications) && data.specifications.includes(artifact)) && !localLightweight) errors.push(`${id}: criterion ${value} does not belong to a linked specification or local lightweight contract`);
+          const localSchema2Task = artifact === id && config.schema_version === 2 && ['light', 'standard'].includes(config.workflow.rigor);
+          if (!(Array.isArray(data.specifications) && data.specifications.includes(artifact)) && !localLightweight && !localSchema2Task) errors.push(`${id}: criterion ${value} does not belong to a linked specification or local lightweight contract`);
           if (!new RegExp(`^#{1,6}\\s+${criterion}(?:\\s|$)`, 'm').test(records.get(artifact)?.body ?? '')) errors.push(`${id}: missing criterion heading ${value}`);
         } else if (field !== 'evidence' && !records.has(value)) errors.push(`${id}: unresolved ${field} reference ${value}`);
         if (['requirements', 'specifications', 'dependencies', 'approval_refs'].includes(field)) {
@@ -123,7 +161,8 @@ export async function validateProjectRecords(projectRoot: string, config: Projec
       }
     }
     const readiness = data.readiness === 'ready';
-    if (readiness && (!Array.isArray(data.acceptance_criteria) || data.acceptance_criteria.length === 0 || (configProfile?.artifacts.includes('requirements') && (!Array.isArray(data.requirements) || !data.requirements.length)) || (configProfile?.artifacts.includes('specification') && (!Array.isArray(data.specifications) || !data.specifications.length)))) errors.push(`${id}: ready work lacks profile-required traceability`);
+    const schema2CompactReadiness = config.schema_version === 2 && ['light', 'standard'].includes(config.workflow.rigor);
+    if (readiness && (!Array.isArray(data.acceptance_criteria) || data.acceptance_criteria.length === 0 || (!schema2CompactReadiness && ((configProfile?.artifacts.includes('requirements') && (!Array.isArray(data.requirements) || !data.requirements.length)) || (configProfile?.artifacts.includes('specification') && (!Array.isArray(data.specifications) || !data.specifications.length)))))) errors.push(`${id}: ready work lacks profile-required traceability`);
     if (data.status === 'done') {
       const refs = Array.isArray(data.approval_refs) ? data.approval_refs : [];
       const completion = refs.some((ref) => {
@@ -132,7 +171,7 @@ export async function validateProjectRecords(projectRoot: string, config: Projec
         const artifacts = approval.artifacts;
         return approval.gate === 'completion' && approval.status === 'approved' && approval.decision === 'approved' && Array.isArray(artifacts) && artifacts.some((entry) => entry === id || isRecord(entry) && entry.id === id);
       });
-      if (!readiness || !Array.isArray(data.evidence) || data.evidence.length === 0 || !completion) errors.push(`${id}: done requires ready work, evidence and recorded completion acceptance`);
+      if (!readiness || !Array.isArray(data.evidence) || data.evidence.length === 0 || (!schema2CompactReadiness && !completion)) errors.push(`${id}: done requires ready work, evidence and recorded completion acceptance`);
     }
   }
   const visiting = new Set<string>(); const visited = new Set<string>();
@@ -159,7 +198,7 @@ export async function validateRepository(root: string): Promise<string[]> {
   const required = ['README.md', 'AGENTS.md', 'LICENSE', 'VERSION', 'CHANGELOG.md', 'docs/architecture.md', 'docs/artifact-model.md', 'docs/validation.md'];
   const templates: Record<string, string[]> = {
     'init-project': ['project-overview.md', 'config.json'],
-    'define-work': ['requirements.md', 'specification.md', 'epic.md', 'ticket.md', 'approval-record.md'],
+    'define-work': ['requirements.md', 'specification.md', 'epic.md', 'ticket.md', 'compact-task.md', 'approval-record.md'],
     'plan-work': ['adr.md', 'implementation-plan.md'],
     'verify-work': ['verification-report.md'],
   };
