@@ -154,3 +154,13 @@ configuration migration and managed instruction refresh each need their own
 reviewed diff, preservation checks and applicable authorization. Do not infer a
 migration from a framework version change. Project artifacts and overrides stay
 outside installed skills.
+
+## Usage reporting
+
+When the host exposes exact token usage for the completed turn, display it after
+the substantive response with the skill name and input, cached-input, output,
+reasoning, and total token counts that are available. Never estimate token use
+from text length and never claim unavailable categories. Because hosts calculate
+usage after generation, an external chat harness may append the footer with
+`sdd usage footer`; the skill itself must not delay or alter work when metadata
+is unavailable.

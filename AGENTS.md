@@ -16,7 +16,8 @@ architecture in `docs/architecture.md`.
 - Treat `.beligent/`, `docs/sdd/`, and assistant instruction files as project
   owned. Setup and adoption workflows inspect existing content and propose
   scoped changes for approval.
-- Do not add telemetry, hosted services, accounts, or an agent-specific runtime.
+- Keep usage accounting local, explicit, and free of prompt/tool content. Do not
+  add hosted telemetry, accounts, or an agent-specific runtime.
 - Run `npm run typecheck`, `npm run lint`, `npm test`,
   `npm run sync:assets -- --check`, `npm run validate:framework`, and
   `npm run validate:package` for relevant changes. Report checks actually run

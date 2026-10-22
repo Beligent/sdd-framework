@@ -8,6 +8,7 @@ import { stringify } from 'yaml';
 import { parseConfig, previewConfigMigration, validateConfig, type ProjectConfig, type Schema1ProjectConfig, type Schema2ProjectConfig } from '../src/validation/config.js';
 import { localLinkErrors, parseFrontmatter, validateProjectRecords, validateRepository } from '../src/validation/repository.js';
 import { mappings, skills, syncAssets } from '../src/packaging/sync-assets.js';
+import { createUsageRecord, formatUsageFooter, parseAgentUsage, summarizeUsage } from '../src/usage/usage.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const temporary: string[] = [];
@@ -657,6 +658,25 @@ describe('repository and artifact validation', () => {
   });
 });
 
+describe('skill usage accounting', () => {
+  it('normalizes Codex totals and aggregates records without source content', () => {
+    const source = '{"type":"turn.completed","usage":{"input_tokens":100,"input_tokens_details":{"cached_tokens":40},"output_tokens":25,"output_tokens_details":{"reasoning_tokens":5},"total_tokens":125},"secret":"do not retain"}\n';
+    expect(parseAgentUsage('codex', source)).toMatchObject({ input_tokens: 100, cached_input_tokens: 40, output_tokens: 25, reasoning_tokens: 5, total_tokens: 125 });
+    const item = createUsageRecord('codex', 'define-work', 'TICKET-1', source, '2026-10-22T00:00:00.000Z');
+    expect(JSON.stringify(item)).not.toContain('do not retain');
+    expect(formatUsageFooter(item)).toBe('Token usage — define-work (codex): 125 total | 100 input | 40 cached input | 0 cache write | 25 output | 5 reasoning');
+    expect(summarizeUsage([item, { ...item, id: 'another' }])).toMatchObject([{ skill: 'define-work', runs: 2, total_tokens: 250 }]);
+  });
+
+  it('sums Claude streaming message usage when the result has cost but no aggregate usage', () => {
+    const source = '{"type":"assistant","message":{"usage":{"input_tokens":30,"cache_read_input_tokens":10,"cache_creation_input_tokens":4,"output_tokens":8}}}\n{"type":"assistant","message":{"usage":{"input_tokens":20,"output_tokens":7}}}\n{"type":"result","total_cost_usd":0.012}\n';
+    expect(parseAgentUsage('claude', source)).toEqual({
+      input_tokens: 50, cached_input_tokens: 10, cache_creation_input_tokens: 4,
+      output_tokens: 15, reasoning_tokens: 0, total_tokens: 79, cost_usd: 0.012,
+    });
+  });
+});
+
 describe('CLI', () => {
   function run(args: string[]) {
     return spawnSync(process.execPath, ['--import', 'tsx', path.join(root, 'src/cli/index.ts'), ...args], { cwd: root, encoding: 'utf8' });
@@ -673,6 +693,28 @@ describe('CLI', () => {
   it('keeps the npm package version and VERSION file in sync', async () => {
     const pkg = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')) as { version: string };
     expect((await readFile(path.join(root, 'VERSION'), 'utf8')).trim()).toBe(pkg.version);
+  });
+
+  it('imports Codex and Claude token usage and reports totals by skill without retaining prompts', async () => {
+    const project = await tempdir();
+    const codex = path.join(project, 'codex.jsonl');
+    const claude = path.join(project, 'claude.jsonl');
+    const store = path.join(project, '.beligent/usage.jsonl');
+    await writeFile(codex, '{"type":"item.completed","text":"private prompt"}\n{"type":"turn.completed","usage":{"input_tokens":100,"input_tokens_details":{"cached_tokens":40},"output_tokens":25,"output_tokens_details":{"reasoning_tokens":5},"total_tokens":125}}\n');
+    await writeFile(claude, '{"type":"assistant","message":{"usage":{"input_tokens":30,"cache_read_input_tokens":10,"cache_creation_input_tokens":4,"output_tokens":8}}}\n{"type":"assistant","message":{"usage":{"input_tokens":20,"output_tokens":7}}}\n{"type":"result","total_cost_usd":0.012}\n');
+
+    const footer = run(['usage', 'footer', '--agent', 'codex', '--skill', 'define-work', '--file', codex]);
+    expect(footer.status).toBe(0);
+    expect(footer.stdout.trim()).toBe('Token usage — define-work (codex): 125 total | 100 input | 40 cached input | 0 cache write | 25 output | 5 reasoning');
+    expect(run(['usage', 'import', '--agent', 'codex', '--skill', 'define-work', '--file', codex, '--task', 'TICKET-1', '--store', store]).status).toBe(0);
+    expect(run(['usage', 'import', '--agent', 'claude', '--skill', 'develop-task', '--file', claude, '--store', store]).status).toBe(0);
+    expect(run(['usage', 'import', '--agent', 'codex', '--skill', 'define-work', '--file', codex, '--task', 'TICKET-1', '--store', store]).stdout).toContain('already imported');
+    const report = run(['usage', 'report', '--store', store, '--json']);
+    expect(report.status).toBe(0);
+    const summary = JSON.parse(report.stdout) as Array<{ skill: string; total_tokens: number; cost_usd: number }>;
+    expect(summary.find((item) => item.skill === 'define-work')?.total_tokens).toBe(125);
+    expect(summary.find((item) => item.skill === 'develop-task')).toMatchObject({ total_tokens: 79, cost_usd: 0.012 });
+    expect(await readFile(store, 'utf8')).not.toContain('private prompt');
   });
 
   it('validates a project config and returns a nonzero exit status for bad config', async () => {

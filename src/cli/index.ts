@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-import { access, lstat, readFile, writeFile } from 'node:fs/promises';
+import { access, appendFile, lstat, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadConfig, parseConfig, previewConfigMigration, validateConfig, type ProjectConfig } from '../validation/config.js';
+import { createUsageRecord, formatUsageFooter, parseUsageRecords, summarizeUsage, type SupportedAgent } from '../usage/usage.js';
 
 const root = process.cwd();
 const packagePath = fileURLToPath(new URL('../../package.json', import.meta.url));
@@ -159,6 +160,109 @@ async function doctor(args: string[]): Promise<number> {
   return failures ? 1 : 0;
 }
 
+type UsageImportOptions = { agent: SupportedAgent; skill: string; file: string; store: string; task?: string };
+
+function optionValue(args: string[], name: string): string | undefined {
+  const index = args.indexOf(name);
+  return index >= 0 ? args[index + 1] : undefined;
+}
+
+function parseUsageImportOptions(args: string[]): UsageImportOptions | undefined {
+  const agent = optionValue(args, '--agent');
+  const skill = optionValue(args, '--skill');
+  const file = optionValue(args, '--file');
+  const store = optionValue(args, '--store') ?? path.join(root, '.beligent', 'usage.jsonl');
+  const task = optionValue(args, '--task');
+  const allowed = new Set(['--agent', '--skill', '--file', '--store', '--task']);
+  for (let index = 0; index < args.length; index += 2) if (!allowed.has(args[index] ?? '') || !args[index + 1]) return undefined;
+  if ((agent !== 'codex' && agent !== 'claude') || !skill || !file || !coreSkills.includes(skill)) return undefined;
+  return { agent, skill, file: path.resolve(root, file), store: path.resolve(root, store), ...(task ? { task } : {}) };
+}
+
+async function usageImport(args: string[]): Promise<number> {
+  const options = parseUsageImportOptions(args);
+  if (!options) {
+    console.error('Usage: sdd usage import --agent <codex|claude> --skill <name> --file <structured-output> [--task <id>] [--store <path>]');
+    return 2;
+  }
+  try {
+    const source = await readFile(options.file, 'utf8');
+    const item = createUsageRecord(options.agent, options.skill, options.task, source);
+    let existing = '';
+    try {
+      const info = await lstat(options.store);
+      if (info.isSymbolicLink() || info.nlink > 1 || !info.isFile()) throw new Error('usage store must be a regular, unlinked file');
+      existing = await readFile(options.store, 'utf8');
+    } catch (error) {
+      if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error;
+    }
+    if (parseUsageRecords(existing).some((record) => record.id === item.id)) {
+      console.log(`Usage already imported: ${item.id}`);
+      return 0;
+    }
+    await mkdir(path.dirname(options.store), { recursive: true });
+    await appendFile(options.store, `${JSON.stringify(item)}\n`, { encoding: 'utf8', mode: 0o600 });
+    console.log(`Imported ${item.total_tokens} tokens for ${item.skill} (${item.agent}).`);
+    return 0;
+  } catch (error) {
+    console.error(`Cannot import usage: ${error instanceof Error ? error.message : String(error)}`);
+    return 1;
+  }
+}
+
+async function usageReport(args: string[]): Promise<number> {
+  let store = path.join(root, '.beligent', 'usage.jsonl');
+  let json = false;
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] === '--store' && args[index + 1]) { store = path.resolve(root, args[index + 1]!); index += 1; }
+    else if (args[index] === '--json') json = true;
+    else {
+      console.error('Usage: sdd usage report [--store <path>] [--json]');
+      return 2;
+    }
+  }
+  try {
+    const summary = summarizeUsage(parseUsageRecords(await readFile(store, 'utf8')));
+    if (json) console.log(JSON.stringify(summary, null, 2));
+    else {
+      console.log('Skill\tRuns\tInput\tCached input\tCache write\tOutput\tReasoning\tTotal\tCost USD');
+      for (const item of summary) console.log([
+        item.skill, item.runs, item.input_tokens, item.cached_input_tokens, item.cache_creation_input_tokens,
+        item.output_tokens, item.reasoning_tokens, item.total_tokens, item.cost_usd === undefined ? '—' : item.cost_usd.toFixed(6),
+      ].join('\t'));
+    }
+    return 0;
+  } catch (error) {
+    console.error(`Cannot report usage: ${error instanceof Error ? error.message : String(error)}`);
+    return 1;
+  }
+}
+
+async function usageFooter(args: string[]): Promise<number> {
+  const options = parseUsageImportOptions(args);
+  if (!options) {
+    console.error('Usage: sdd usage footer --agent <codex|claude> --skill <name> --file <structured-output> [--task <id>]');
+    return 2;
+  }
+  try {
+    const source = await readFile(options.file, 'utf8');
+    console.log(formatUsageFooter(createUsageRecord(options.agent, options.skill, options.task, source)));
+    return 0;
+  } catch (error) {
+    console.error(`Cannot format usage footer: ${error instanceof Error ? error.message : String(error)}`);
+    return 1;
+  }
+}
+
+async function usage(args: string[]): Promise<number> {
+  const [subcommand, ...rest] = args;
+  if (subcommand === 'import') return usageImport(rest);
+  if (subcommand === 'report') return usageReport(rest);
+  if (subcommand === 'footer') return usageFooter(rest);
+  console.error('Usage: sdd usage <import|report|footer>');
+  return 2;
+}
+
 async function main(): Promise<void> {
   const [command, ...args] = process.argv.slice(2);
   let status: number;
@@ -167,8 +271,9 @@ async function main(): Promise<void> {
     case 'validate': status = await validate(args); break;
     case 'migrate-config': status = await migrateConfig(args); break;
     case 'doctor': status = await doctor(args); break;
+    case 'usage': status = await usage(args); break;
     case '--help': case '-h': case undefined:
-      console.log('Beligent SDD tooling\n\nUsage: sdd <command>\n\nCommands:\n  validate [--config <path>]  Validate project configuration\n  migrate-config [--config <path>] [--adopt-recommended-workflow] [--write --confirm]\n                              Preview or explicitly apply a schema-1 to schema-2 migration\n  doctor [project-path]       Diagnose configuration and installed skills\n  version                     Print the framework version');
+      console.log('Beligent SDD tooling\n\nUsage: sdd <command>\n\nCommands:\n  validate [--config <path>]  Validate project configuration\n  migrate-config [--config <path>] [--adopt-recommended-workflow] [--write --confirm]\n                              Preview or explicitly apply a schema-1 to schema-2 migration\n  doctor [project-path]       Diagnose configuration and installed skills\n  usage import ...            Import Codex or Claude structured token usage for one skill\n  usage report [--json]       Report locally recorded usage grouped by skill\n  usage footer ...            Format exact host usage for display after a chat response\n  version                     Print the framework version');
       status = command === undefined ? 2 : 0;
       break;
     default:

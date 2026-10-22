@@ -31,6 +31,7 @@
   },
   "files": [
     "dist/cli/index.js",
+    "dist/usage/usage.js",
     "dist/validation/config.js",
     "schema/**",
     "skills/**",

@@ -81,12 +81,15 @@ runtime dependency and do not require Python in consumer projects.
 ```sh
 npx @beligent/sdd-framework validate
 npx @beligent/sdd-framework doctor
+npx @beligent/sdd-framework usage report
 ```
 
 `validate` checks `.beligent/config.json` without changing it. `doctor` reports
 configuration problems and whether core skills are discoverable in common
-project locations. It does not install skills or perform setup. The published
-npm package is an optional companion to the GitHub collection.
+project locations. `usage footer`, `usage import`, and `usage report` provide
+opt-in local token accounting from Codex or Claude structured output. The CLI
+does not install skills or perform setup. The published npm package is an
+optional companion to the GitHub collection.
 
 ## Project maturity
 

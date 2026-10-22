@@ -24,11 +24,12 @@ const problems = [];
 for (const skill of ['init-project', 'adopt-project', 'define-work', 'plan-work', 'implement-ticket', 'verify-work', 'develop-task', 'diagnose', 'deliver-work']) {
   if (!files.includes(`skills/${skill}/SKILL.md`)) problems.push(`Missing published skill entrypoint: ${skill}`);
 }
-for (const required of ['README.md', 'LICENSE', 'CHANGELOG.md', 'VERSION', 'package.json', 'dist/cli/index.js', 'schema/config.schema.json', 'schema/config-v2.schema.json']) {
+const runtimeFiles = ['dist/cli/index.js', 'dist/usage/usage.js', 'dist/validation/config.js'];
+for (const required of ['README.md', 'LICENSE', 'CHANGELOG.md', 'VERSION', 'package.json', ...runtimeFiles, 'schema/config.schema.json', 'schema/config-v2.schema.json']) {
   if (!files.includes(required)) problems.push(`Missing required package file: ${required}`);
 }
 for (const file of files) {
-  if (/^(?:tests|examples|src|scripts|\.github|docs\/plans)\//.test(file) || file.startsWith('dist/') && !['dist/cli/index.js', 'dist/validation/config.js'].includes(file) || /(?:^|\/)(?:requirements-dev\.txt|test_validation\.py|__pycache__|\.pyc$)/.test(file)) {
+  if (/^(?:tests|examples|src|scripts|\.github|docs\/plans)\//.test(file) || file.startsWith('dist/') && !runtimeFiles.includes(file) || /(?:^|\/)(?:requirements-dev\.txt|test_validation\.py|__pycache__|\.pyc$)/.test(file)) {
     problems.push(`Development-only file would be published: ${file}`);
   }
 }
