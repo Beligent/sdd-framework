@@ -44,3 +44,9 @@ explicit intent. Stable project context is referenced rather than copied into
 every task, and unrelated discoveries remain future candidates. Verification
 uses the configured testing categories only when their policy and the changed
 risk make them applicable, then leaves evidence suitable for later delivery.
+
+`develop-task` composes this path for one selected task. It reuses sufficient
+definition and approved plans, asks only for blocking clarification, creates a
+task plan only when useful, implements, verifies, and requests focused manual
+validation when relevant. It then stops ready for delivery without selecting
+another task or performing commit, push, or pull-request actions.

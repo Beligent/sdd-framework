@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { stringify } from 'yaml';
 import { parseConfig, previewConfigMigration, validateConfig, type ProjectConfig, type Schema1ProjectConfig, type Schema2ProjectConfig } from '../src/validation/config.js';
 import { localLinkErrors, parseFrontmatter, validateProjectRecords, validateRepository } from '../src/validation/repository.js';
-import { mappings, syncAssets } from '../src/packaging/sync-assets.js';
+import { mappings, skills, syncAssets } from '../src/packaging/sync-assets.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const temporary: string[] = [];
@@ -293,7 +293,7 @@ describe('canonical skill packaging', () => {
 });
 
 describe('repository and artifact validation', () => {
-  it('validates the checked-in six-skill repository and worked example', async () => {
+  it('validates the checked-in seven-skill repository and worked example', async () => {
     expect(await validateRepository(root)).toEqual([]);
   });
 
@@ -322,6 +322,7 @@ describe('repository and artifact validation', () => {
     const lifecycle = await readFile(path.join(root, source), 'utf8');
     const lifecycleMappings = mappings().filter((entry) => entry.source === source);
     expect(lifecycleMappings.map((entry) => entry.destination).sort()).toEqual([
+      'skills/develop-task/references/shared/current-task-lifecycle.md',
       'skills/implement-ticket/references/shared/current-task-lifecycle.md',
       'skills/plan-work/references/shared/current-task-lifecycle.md',
       'skills/verify-work/references/shared/current-task-lifecycle.md',
@@ -350,6 +351,32 @@ describe('repository and artifact validation', () => {
     expect(normalized[4]).toContain('without rewriting them');
     expect(normalized[5]).toContain('one concise batch of workflow, testing, and delivery defaults');
     expect(normalized[6]).toContain('preferences already present in a valid configuration');
+  });
+
+  it('discovers develop-task and preserves its deterministic orchestration decisions', async () => {
+    expect(skills).toEqual(['init-project', 'adopt-project', 'define-work', 'plan-work', 'implement-ticket', 'verify-work', 'develop-task']);
+    const entrypoint = await readFile(path.join(root, 'skills/develop-task/SKILL.md'), 'utf8');
+    const parsed = parseFrontmatter(entrypoint);
+    expect(parsed.data.name).toBe('develop-task');
+    const decisions = new Map([...parsed.body.matchAll(/^\| ([^|]+?) \| ([^|]+?) \|$/gm)].map((match) => [match[1], match[2]]));
+    expect(decisions.get('Ready compact task')).toContain('Skip definition and planning; implement');
+    expect(decisions.get('Ready expanded task with applicable PLAN')).toContain('Reuse its REQ/SPEC/PLAN; implement');
+    expect(decisions.get('Small blocking gap')).toContain('clarification');
+    expect(decisions.get('Stop rule met and implementation is obvious')).toContain('Skip PLAN');
+    expect(decisions.get('Coordinated steps, cross-component change, sequencing, material risk, rollback, non-obvious tradeoff, or rigorous requirement')).toContain('Use `plan-task`');
+    expect(decisions.get('Consequential expansion beyond selected depth')).toContain('ask before broader design');
+    expect(decisions.get('Manual observation needed after automated checks')).toContain('manual-validation checklist');
+    expect(decisions.get('Repeated symptom fixes do not resolve the behavior')).toContain('diagnosis-required');
+    expect(decisions.get('Verification complete')).toContain('ready-for-delivery');
+    const normalized = parsed.body.replace(/\s+/g, ' ');
+    expect(normalized).toContain('Never infer `plan-epic` or `plan-project`');
+    expect(normalized).toContain('Select checks from project `testing` policy and changed risk');
+    expect(normalized).toContain('Run categories configured as `always`');
+    expect(normalized).toContain('apply conditional categories only when their condition is relevant');
+    expect(normalized).toContain('Do not add unrelated test infrastructure');
+    expect(normalized).toContain('Do not create follow-up tickets unless explicitly requested');
+    expect(normalized).toContain('Do not commit, push, create or merge a pull request');
+    expect(normalized).toContain('Schema 1 retains its existing profile artifacts, readiness, and approval gates');
   });
 
   it('rejects duplicate YAML keys and links outside a skill package', async () => {
@@ -621,6 +648,7 @@ describe('CLI', () => {
     expect(result.stdout).toContain('OK configuration: schema 2, profile standard, rigor standard, design depth current-task');
     expect(result.stdout).toContain('init-project');
     expect(result.stderr).toContain('WARN skills not found');
+    expect(result.stderr).toContain('develop-task');
   });
 });
 

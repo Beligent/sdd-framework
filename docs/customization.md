@@ -71,7 +71,7 @@ single-project convention, use the project's conventions directory instead.
 
 ## Workflow and provider extensions
 
-Keep six entry skills. Add focused management routes below `define-work` with
+Keep seven entry skills. Add focused management routes below `define-work` with
 their own input/output contracts, and update the route table. Reuse normalized
 ticket operations rather than embedding storage code in a route. A new provider
 implements the [contract](../skills/define-work/references/ticket-management/contract.md),

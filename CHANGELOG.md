@@ -20,6 +20,12 @@ contracts and records drift as future candidates; verification selects checks
 from project testing policy and task risk. Schema-1 skill behavior and all six
 public entry points remain available.
 
+Added `develop-task` as the seventh public skill. It orchestrates one bounded
+task through existing definition, optional task planning, implementation,
+verification, review, and focused manual validation contracts, then stops ready
+for delivery. It reuses existing artifacts, never infers project planning, and
+does not perform commit, push, pull-request, merge, or ticket-closing actions.
+
 ## 0.1.0 — 2026-10-18
 
 Initial framework: six portable skills, four management workflow entry points,

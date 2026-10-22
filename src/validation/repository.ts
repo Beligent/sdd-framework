@@ -194,7 +194,7 @@ export async function validateRepository(root: string): Promise<string[]> {
   for (const entry of skillDirs) if (entry.isDirectory()) {
     try { await stat(path.join(root, 'skills', entry.name, 'SKILL.md')); actual.add(entry.name); } catch { /* not a skill */ }
   }
-  if ([...actual].sort().join('|') !== [...skills].sort().join('|')) errors.push(`Expected six core skills; found ${[...actual].sort().join(', ')}`);
+  if ([...actual].sort().join('|') !== [...skills].sort().join('|')) errors.push(`Expected seven core skills; found ${[...actual].sort().join(', ')}`);
   const required = ['README.md', 'AGENTS.md', 'LICENSE', 'VERSION', 'CHANGELOG.md', 'docs/architecture.md', 'docs/artifact-model.md', 'docs/validation.md'];
   const templates: Record<string, string[]> = {
     'init-project': ['project-overview.md', 'config.json'],

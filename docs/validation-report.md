@@ -5,17 +5,17 @@
 Date: 2026-10-22. Framework/package version: 0.1.0. Configuration schemas: 1 and 2.
 
 The TypeScript migration preserves the original validation scenarios and moves
-framework-maintainer tooling out of Python. `tests/framework.test.ts` has 57
+framework-maintainer tooling out of Python. `tests/framework.test.ts` has 58
 tests covering config safety, deterministic packaging, Markdown/ticket graph
 validation, CLI behavior, and package version agreement.
 
 | Check | Observed result |
 | --- | --- |
 | TypeScript typecheck and ESLint | Passed |
-| Vitest | 57 tests passed after Increment 4 validation |
+| Vitest | 58 tests passed after Increment 5 validation |
 | Shared resource drift and full framework validation | Passed |
 | `VERSION` and `package.json` agreement | Passed at 0.1.0 |
-| `npm pack --dry-run` allowlist check | Passed; 88 intentional files |
+| `npm pack --dry-run` allowlist check | Passed; 105 intentional files |
 | Packed CLI smoke | Extracted package printed version and validated the worked example configuration |
 | npm dependency audit | Zero vulnerabilities after upgrading the test runner |
 
@@ -29,7 +29,10 @@ migration path. Increment 3 adds schema-2 compact light/standard tasks and
 stop-rule readiness. Increment 4 refactors the six existing public skills around
 one packaged current-task lifecycle contract and adds deterministic routing and
 expanded-artifact compatibility coverage. Schema-1 behavior, skill count, and
-delivery automation remain unchanged.
+delivery automation remain unchanged. Increment 5 adds `develop-task` as a
+seventh public skill with deterministic orchestration decisions and packaged
+copies of existing canonical phase resources. Schema-1 semantics and the Git
+delivery boundary remain unchanged.
 
 ## Initial MVP validation report (historical)
 
