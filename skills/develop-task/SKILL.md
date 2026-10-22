@@ -13,7 +13,8 @@ implementation, or verification logic.
 
 Read applicable project instructions, `.beligent/config.json`,
 [governance](references/shared/governance.md), the
-[current-task lifecycle](references/shared/current-task-lifecycle.md), and the
+[current-task lifecycle](references/shared/current-task-lifecycle.md), the
+[diagnosis and simplicity contract](references/shared/diagnosis-and-simplicity.md), and the
 configured [ticket contract](references/ticket-management/contract.md) and
 [Markdown provider](references/ticket-management/markdown.md). Load only relevant
 project conventions, ADRs, artifacts, and code.
@@ -36,7 +37,7 @@ approval gates. Schema 2 uses rigor, design depth, expansion, and testing policy
 | Consequential expansion beyond selected depth | If `ask_before_expansion` is true, identify the boundary and ask before broader design |
 | Several plausible tasks | Ask the developer to select one |
 | Manual observation needed after automated checks | Provide one focused manual-validation checklist and wait |
-| Repeated symptom fixes do not resolve the behavior | Stop in `diagnosis-required` state with observed failures |
+| Two ineffective symptom-level fixes do not resolve the same behavior | Stop corrective implementation in `diagnosis-required`; apply the diagnosis contract before another attempt |
 | Verification complete | Update evidence/status and stop `ready-for-delivery` |
 
 Never infer `plan-epic` or `plan-project`. Comprehensive work is allowed only
@@ -81,9 +82,9 @@ not apply this schema-2 short path to legacy standard projects.
 
 ## Failure and delivery boundary
 
-Resolve ordinary fixable failures within current scope. Apply governance's
-root-cause threshold; when reached, report `diagnosis-required` rather than
-accumulating patches. This does not add or invoke a dedicated diagnosis workflow.
+Resolve an ordinary first fixable failure within current scope and reverify it.
+At the diagnosis contract's two-fix threshold, stop accumulating patches and
+switch to its root-cause investigation before another corrective attempt.
 
 The terminal outcome is `ready-for-delivery`, pending manual validation, blocked,
 or diagnosis-required. You may propose a conventional commit message. Do not

@@ -39,7 +39,7 @@ npm run check:version
 npm run validate:package
 ```
 
-Framework validation checks seven skill entrypoints, metadata, required templates,
+Framework validation checks eight skill entrypoints, metadata, required templates,
 local Markdown links, package-manifest byte consistency, config templates, and
 the worked example's artifact graph. Package validation builds the CLI, verifies
 that `VERSION` agrees with `package.json`, and checks the `npm pack --dry-run`

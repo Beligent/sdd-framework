@@ -293,7 +293,7 @@ describe('canonical skill packaging', () => {
 });
 
 describe('repository and artifact validation', () => {
-  it('validates the checked-in seven-skill repository and worked example', async () => {
+  it('validates the checked-in eight-skill repository and worked example', async () => {
     expect(await validateRepository(root)).toEqual([]);
   });
 
@@ -354,7 +354,7 @@ describe('repository and artifact validation', () => {
   });
 
   it('discovers develop-task and preserves its deterministic orchestration decisions', async () => {
-    expect(skills).toEqual(['init-project', 'adopt-project', 'define-work', 'plan-work', 'implement-ticket', 'verify-work', 'develop-task']);
+    expect(skills).toEqual(['init-project', 'adopt-project', 'define-work', 'plan-work', 'implement-ticket', 'verify-work', 'develop-task', 'diagnose']);
     const entrypoint = await readFile(path.join(root, 'skills/develop-task/SKILL.md'), 'utf8');
     const parsed = parseFrontmatter(entrypoint);
     expect(parsed.data.name).toBe('develop-task');
@@ -366,7 +366,7 @@ describe('repository and artifact validation', () => {
     expect(decisions.get('Coordinated steps, cross-component change, sequencing, material risk, rollback, non-obvious tradeoff, or rigorous requirement')).toContain('Use `plan-task`');
     expect(decisions.get('Consequential expansion beyond selected depth')).toContain('ask before broader design');
     expect(decisions.get('Manual observation needed after automated checks')).toContain('manual-validation checklist');
-    expect(decisions.get('Repeated symptom fixes do not resolve the behavior')).toContain('diagnosis-required');
+    expect(decisions.get('Two ineffective symptom-level fixes do not resolve the same behavior')).toContain('diagnosis-required');
     expect(decisions.get('Verification complete')).toContain('ready-for-delivery');
     const normalized = parsed.body.replace(/\s+/g, ' ');
     expect(normalized).toContain('Never infer `plan-epic` or `plan-project`');
@@ -377,6 +377,46 @@ describe('repository and artifact validation', () => {
     expect(normalized).toContain('Do not create follow-up tickets unless explicitly requested');
     expect(normalized).toContain('Do not commit, push, create or merge a pull request');
     expect(normalized).toContain('Schema 1 retains its existing profile artifacts, readiness, and approval gates');
+  });
+
+  it('discovers diagnose and applies one canonical deterministic safeguard contract', async () => {
+    const source = 'skills/diagnose/references/shared/diagnosis-and-simplicity.md';
+    const contract = await readFile(path.join(root, source), 'utf8');
+    const contractMappings = mappings().filter((entry) => entry.source === source);
+    expect(contractMappings.map((entry) => entry.destination).sort()).toEqual([
+      'skills/define-work/references/shared/diagnosis-and-simplicity.md',
+      'skills/develop-task/references/shared/diagnosis-and-simplicity.md',
+      'skills/implement-ticket/references/shared/diagnosis-and-simplicity.md',
+      'skills/plan-work/references/shared/diagnosis-and-simplicity.md',
+      'skills/verify-work/references/shared/diagnosis-and-simplicity.md',
+    ]);
+    for (const mapping of contractMappings) expect(await readFile(path.join(root, mapping.destination), 'utf8')).toBe(contract);
+
+    const entrypoint = parseFrontmatter(await readFile(path.join(root, 'skills/diagnose/SKILL.md'), 'utf8'));
+    expect(entrypoint.data.name).toBe('diagnose');
+    const fixActions = new Map([...contract.matchAll(/^\| ([^|]+?) \| ([^|]+?) \|$/gm)].map((match) => [match[1], match[2]]));
+    expect(fixActions.get('0 or 1')).toContain('correction and reverification remain allowed');
+    expect(fixActions.get('2 or more')).toContain('`diagnosis-required`');
+    for (const state of [
+      '`implementation-failure`', '`test-failure`', '`acceptance-criterion-failure`', '`manual-validation-failure`',
+      '`diagnosis-required`', '`specification-contradiction`', '`scope-expansion-required`', '`unrelated-discovery`',
+    ]) expect(fixActions.has(state)).toBe(true);
+
+    const normalizedContract = contract.replace(/\s+/g, ' ');
+    const normalizedSkill = entrypoint.body.replace(/\s+/g, ' ');
+    expect(normalizedSkill).toContain('is not required');
+    expect(normalizedSkill).toContain('without forcing new SDD artifacts');
+    expect(normalizedContract).toContain('new project-planning artifacts');
+    expect(normalizedSkill).toContain('Separate observations from hypotheses');
+    expect(normalizedSkill).toContain('do not change product behavior or perform unrelated cleanup');
+    expect(normalizedContract).toContain('ask before creating broader specification or design');
+    expect(normalizedContract).toContain('materially simpler implementation');
+    expect(normalizedContract).toContain('speculative abstractions or infrastructure');
+    expect(normalizedContract).toContain('Directly necessary support code is not feature drift');
+    expect(normalizedContract).toContain('Significant unapproved drift pauses or fails the current task');
+    expect(normalizedContract).toContain('unrelated discovery remains a concise future candidate');
+    expect(normalizedContract).toContain('Process overhead appears disproportionate to the current task');
+    expect(normalizedContract).toContain('Do not delete, compact, rewrite, or bypass required artifacts');
   });
 
   it('rejects duplicate YAML keys and links outside a skill package', async () => {
@@ -649,6 +689,7 @@ describe('CLI', () => {
     expect(result.stdout).toContain('init-project');
     expect(result.stderr).toContain('WARN skills not found');
     expect(result.stderr).toContain('develop-task');
+    expect(result.stderr).toContain('diagnose');
   });
 });
 

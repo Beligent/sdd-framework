@@ -1,7 +1,7 @@
 # Beligent SDD contributor instructions
 
 This repository contains the portable framework and optional npm tooling, not
-a consumer application. Keep exactly seven core skills and preserve their
+a consumer application. Keep exactly eight core skills and preserve their
 Agent Skills-compatible layout under `skills/`. Follow the approved framework
 architecture in `docs/architecture.md`.
 

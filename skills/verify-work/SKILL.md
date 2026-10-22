@@ -24,6 +24,7 @@ plan and verification; it does not require separate empty artifacts.
 
 Read [governance](references/shared/governance.md), the schema-2
 [current-task lifecycle](references/shared/current-task-lifecycle.md), the
+[diagnosis and simplicity contract](references/shared/diagnosis-and-simplicity.md), the
 [ticket contract](references/ticket-management/contract.md), and the configured
 provider guidance, initially [Markdown tickets](references/ticket-management/markdown.md).
 Check that approvals still cover the implemented behavior, criteria, constraints

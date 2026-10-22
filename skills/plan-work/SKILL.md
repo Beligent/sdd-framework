@@ -14,7 +14,10 @@ canonical behavior and tickets rather than silently changing their meaning.
 
 Read applicable instructions, `.beligent/config.json`,
 [governance](references/shared/governance.md), and the schema-2
-[current-task lifecycle](references/shared/current-task-lifecycle.md). This skill supports configuration
+[current-task lifecycle](references/shared/current-task-lifecycle.md). Read the
+[diagnosis and simplicity contract](references/shared/diagnosis-and-simplicity.md)
+when planning cycles appear disproportionate or evidence contradicts the plan.
+This skill supports configuration
 `schema_version: 1` and `schema_version: 2`; missing configuration requires setup or an explicitly
 unconfigured proposal without persisted artifacts. Unsupported schemas require
 a separate migration proposal before affected writes.

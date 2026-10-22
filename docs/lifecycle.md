@@ -50,3 +50,17 @@ definition and approved plans, asks only for blocking clarification, creates a
 task plan only when useful, implements, verifies, and requests focused manual
 validation when relevant. It then stops ready for delivery without selecting
 another task or performing commit, push, or pull-request actions.
+
+After two ineffective symptom-level fixes against the same behavior,
+`develop-task` stops corrective implementation in `diagnosis-required` and uses
+the shared root-cause contract before another attempt. `diagnose` can also be
+invoked directly without creating a task or planning artifacts. Diagnosis keeps
+observations separate from hypotheses, respects design depth, and recommends the
+smallest supported correction.
+
+Implementation and verification apply the same simplicity and drift review. A
+significant unapproved behavior addition pauses or fails the task; necessary
+supporting code remains valid when its connection to required behavior is clear.
+For an obviously disproportionate process, the framework warns that remaining
+specification or planning may be collapsed into the compact task. The warning
+never rewrites artifacts or bypasses required decisions automatically.

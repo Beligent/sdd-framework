@@ -10,12 +10,12 @@ procedures rather than importing their runtime or persona systems.
 | Layer | Canonical resources | Responsibility |
 | --- | --- | --- |
 | Management | `define-work` workflows, templates and provider contract | Define what/why and manage requirements, behavior, epics and tickets |
-| Engineering | `plan-work`, `implement-ticket`, `verify-work`, `develop-task` | Plan, implement, review and verify approved behavior; orchestrate one current task |
+| Engineering | `plan-work`, `implement-ticket`, `verify-work`, `develop-task`, `diagnose` | Plan, implement, review and verify approved behavior; orchestrate one current task; investigate root causes |
 | Technology | `implement-ticket/references/technology/` | Select only relevant stack guidance |
 | Integration | Setup assets and assistant discovery documentation | Load shared instructions and portable skills |
 
 Setup is handled by `init-project` and `adopt-project`, bringing the core total
-to seven skills. Within management, `requirements`, `specification`, `epics` and
+to eight skills. Within management, `requirements`, `specification`, `epics` and
 `tickets` are direct workflow selectors, each with its own inputs and outputs.
 No full lifecycle run is required to invoke one.
 
@@ -54,6 +54,12 @@ selects one task, short-circuits satisfied phases, coordinates task planning onl
 when useful, implements and verifies, then stops ready for later delivery. It
 does not replace the independently invocable lifecycle skills or perform Git
 delivery.
+
+`diagnose` is independently invocable and supplies the canonical
+[diagnosis and simplicity contract](../skills/diagnose/references/shared/diagnosis-and-simplicity.md)
+used by lifecycle skills for repeated-fix, root-cause, feature-drift, and
+process-proportionality behavior. It recommends the smallest supported
+correction but does not silently implement it or broaden design depth.
 
 ## Framework and project ownership
 

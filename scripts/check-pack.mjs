@@ -21,7 +21,7 @@ try {
 const pack = JSON.parse(result)[0];
 const files = pack.files.map((entry) => entry.path);
 const problems = [];
-for (const skill of ['init-project', 'adopt-project', 'define-work', 'plan-work', 'implement-ticket', 'verify-work', 'develop-task']) {
+for (const skill of ['init-project', 'adopt-project', 'define-work', 'plan-work', 'implement-ticket', 'verify-work', 'develop-task', 'diagnose']) {
   if (!files.includes(`skills/${skill}/SKILL.md`)) problems.push(`Missing published skill entrypoint: ${skill}`);
 }
 for (const required of ['README.md', 'LICENSE', 'CHANGELOG.md', 'VERSION', 'package.json', 'dist/cli/index.js', 'schema/config.schema.json', 'schema/config-v2.schema.json']) {

@@ -26,6 +26,12 @@ verification, review, and focused manual validation contracts, then stops ready
 for delivery. It reuses existing artifacts, never infers project planning, and
 does not perform commit, push, pull-request, merge, or ticket-closing actions.
 
+Added `diagnose` as the eighth public skill and introduced one canonical
+diagnosis, simplicity, feature-drift, and process-proportionality contract. Two
+ineffective symptom fixes now stop `develop-task` in `diagnosis-required` before
+another corrective attempt. Diagnosis remains independently invocable and does
+not silently implement fixes or expand design depth.
+
 ## 0.1.0 — 2026-10-18
 
 Initial framework: six portable skills, four management workflow entry points,

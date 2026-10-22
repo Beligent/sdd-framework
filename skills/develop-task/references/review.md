@@ -21,6 +21,9 @@ hide baseline failures.
 
 ## Review the changed behavior
 
+Apply the packaged diagnosis and simplicity contract for its canonical
+simplicity question, feature-drift rules, and process-cost check.
+
 - Correctness: boundary/error cases, partial failure, state transitions, resource
   cleanup, concurrency and backward compatibility where applicable.
 - Tests: assertions observe the intended behavior, negative cases match the risk,

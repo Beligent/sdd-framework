@@ -27,7 +27,9 @@ architecture decision.
 
 Read [governance](references/shared/governance.md) to establish authorization and
 revision coverage and the schema-2 [current-task
-lifecycle](references/shared/current-task-lifecycle.md) for scope behavior. Read the [ticket contract](references/ticket-management/contract.md)
+lifecycle](references/shared/current-task-lifecycle.md) for scope behavior. Read
+the [diagnosis and simplicity contract](references/shared/diagnosis-and-simplicity.md)
+for repeated-fix, drift, and proportionality safeguards. Read the [ticket contract](references/ticket-management/contract.md)
 and the configured provider guidance, initially
 [Markdown tickets](references/ticket-management/markdown.md), before reading or
 updating ticket state. An unsupported provider requires a supported adapter or a

@@ -15,7 +15,9 @@ not portable slash commands.
 
 Read applicable project instructions, `.beligent/config.json`,
 [governance](references/shared/governance.md), and the schema-2
-[current-task lifecycle](references/shared/current-task-lifecycle.md). This skill supports configuration
+[current-task lifecycle](references/shared/current-task-lifecycle.md). Read the
+[diagnosis and simplicity contract](references/shared/diagnosis-and-simplicity.md)
+when specification/process cycles appear disproportionate. This skill supports configuration
 `schema_version: 1` and `schema_version: 2`. If configuration is missing, explain the setup requirement;
 you may offer an explicitly unconfigured draft, but do not invent project paths
 or persist project artifacts. Unsupported schemas require a separate migration
