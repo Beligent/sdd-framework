@@ -14,7 +14,7 @@ canonical behavior and tickets rather than silently changing their meaning.
 
 Read applicable instructions, `.beligent/config.json`, and
 [governance](references/shared/governance.md). This skill supports configuration
-`schema_version: 1`; missing configuration requires setup or an explicitly
+`schema_version: 1` and `schema_version: 2`; missing configuration requires setup or an explicitly
 unconfigured proposal without persisted artifacts. Unsupported schemas require
 a separate migration proposal before affected writes.
 

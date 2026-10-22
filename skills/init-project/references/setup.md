@@ -5,7 +5,8 @@ Canonical source: `skills/init-project/references/setup.md`. The packaged copy i
 on the framework source checkout or another installed skill's resources.
 
 This procedure creates project integration, not an application or an installer.
-It supports project configuration schema **1** and integration revision **0.1.0**.
+It supports project configuration schemas **1** and **2** and integration revision
+**0.1.0**.
 Read-only investigation is allowed before approval. Adoption configuration writes
 require approval of the concrete integration plan. Existing authorization for
 that exact scope satisfies the gate; installation alone does not authorize it.
@@ -23,10 +24,16 @@ existing requirements, conventions, and backlog locations. Preserve a valid
 existing configuration as authoritative, even when it differs from defaults.
 Do not copy its values into reusable skill source or duplicate its artifacts.
 
-For a new configuration, render `assets/config.json` with a nonempty project
-name/type; selected assistants; selected technologies; the chosen profile; and
-approved artifact paths. The template's `codex` is an example default, not a
+For a new configuration, render the schema-2 `assets/config.json` with a
+nonempty project name/type; selected assistants; selected technologies; the
+existing lifecycle profile; approved artifact paths; and project workflow,
+testing, and delivery policies. Propose the defaults as one concise batch:
+`standard` rigor, `current-task` design depth, ask before expansion, the bundled
+risk-proportionate testing preferences, and feature-branch delivery with push
+confirmation. Let the developer accept them together or name deviations; do not
+run a long questionnaire. The template's `codex` is an example default, not a
 requirement to choose Codex. Empty technologies is valid when none is selected.
+These policies are stable project context and must not be copied into every task.
 Do not add source commits or framework release versions to project configuration.
 Use the installer's own lock file for installed skill provenance.
 
@@ -48,8 +55,9 @@ uses `@AGENTS.md`. If both files exist, inspect their loading and imports before
 proposing a destination. Reuse an existing equivalent import or bootstrap rather
 than duplicating it. Uncertain precedence is an explicit integration conflict.
 
-Show the selected profile/technologies, complete proposed config, exact file and
-section diffs, preserved artifacts, remaining installation actions, and rollback.
+Show the selected profile, workflow/testing/delivery policies and technologies,
+complete proposed config, exact file and section diffs, preserved artifacts,
+remaining installation actions, and rollback.
 For adoption use `assets/adoption-plan.md` and present the plan in chat first.
 No `.beligent` directory, report, or other target file is written before the
 applicable approval. If the repository already has a tracker as its authoritative
@@ -64,18 +72,23 @@ including directory creation and setup-state changes. Report all conflicts found
 so the human can review a complete resolution proposal.
 
 - Parse JSON strictly: reject duplicate keys and invalid JSON. Require integer
-  `schema_version: 1` (a JSON boolean is not an integer version). Unsupported
-  config/state schemas require a separate migration proposal; do not mutate the
-  project, reinterpret fields, or fall back to defaults.
-- Require the schema 1 fields from `assets/config.json`: nonempty string project
+  `schema_version: 1` or `schema_version: 2` (a JSON boolean is not an integer
+  version). Unsupported config/state schemas require a separate migration
+  proposal; do not mutate the project, reinterpret fields, or fall back to
+  defaults.
+- Require the shared schema-1/schema-2 fields from `assets/config.json`: nonempty string project
   name/type; nonempty unique assistant identifiers such as `codex`,
   `claude-code`, `github-copilot`, or `cursor`; a nonempty profile name present in `profiles`; unique technologies from
   `react-typescript`, `nextjs`, `nodejs`, `python`, `fastapi`; artifact paths;
   `tickets.provider: "markdown"` and its epic/ticket paths; built-in `lightweight`
   and `standard` profiles plus any named additional profiles, each with string
   arrays `artifacts` and `approvals`. Preserve implementation and completion
-  decisions in every profile. Do not silently drop unknown settings;
-  report unsupported keys as a compatibility decision before affected writes.
+  decisions in every profile. Schema 2 additionally requires bounded workflow
+  rigor/design-depth/expansion settings, testing preferences, and Git/delivery
+  policy. Schema-2 workflow rigor is project policy only in this release: the
+  retained profile fields continue to control current ticket readiness and
+  approval behavior. Do not silently drop unknown settings; report unsupported
+  keys as a compatibility decision before affected writes.
 - Every configured location is a nonempty repository-relative POSIX path. Reject
   absolute paths, Windows drive/UNC paths, backslashes, NUL, empty components,
   `.` or `..` components, and unresolved template markers. Check instruction,

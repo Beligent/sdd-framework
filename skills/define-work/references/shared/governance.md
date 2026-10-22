@@ -6,10 +6,13 @@ Other skill copies are packaged resources, not independently edited authorities.
 ## Context and scope
 
 Read applicable project instructions and `.beligent/config.json`. Skills support
-configuration schema 1. Missing configuration permits investigation and a setup
-proposal; unsupported schemas need a separately reviewed migration before
+configuration schemas 1 and 2. Missing configuration permits investigation and a
+setup proposal; unsupported schemas need a separately reviewed migration before
 affected writes. Use configured paths, project conventions and technologies.
-Read only resources relevant to the requested workflow. Do not replace existing
+Schema-2 workflow, testing, and delivery settings are project context. Until a
+later lifecycle increment changes the contract, the existing profile fields
+continue to determine artifact, readiness, and approval behavior. Read only
+resources relevant to the requested workflow. Do not replace existing
 requirements or infer permission to alter unrelated project settings.
 
 ## Incremental specification principles

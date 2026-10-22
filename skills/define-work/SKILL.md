@@ -14,7 +14,7 @@ directly. Workflow names are prompt selectors, not portable slash commands.
 
 Read applicable project instructions, `.beligent/config.json`, and
 [governance](references/shared/governance.md). This skill supports configuration
-`schema_version: 1`. If configuration is missing, explain the setup requirement;
+`schema_version: 1` and `schema_version: 2`. If configuration is missing, explain the setup requirement;
 you may offer an explicitly unconfigured draft, but do not invent project paths
 or persist project artifacts. Unsupported schemas require a separate migration
 proposal before affected writes, never automatic regeneration.

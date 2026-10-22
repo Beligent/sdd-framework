@@ -2,8 +2,8 @@
 
 Framework skill releases, project configuration schema, and managed instruction
 integration are independent. The `package.json` version is authoritative and
-`VERSION` is checked against it. Version `0.1.0` supports configuration schema 1 and
-integration revision `0.1.0`. Source/revision provenance belongs to the chosen
+`VERSION` is checked against it. Version `0.1.0` supports configuration schemas 1
+and 2 and integration revision `0.1.0`. Source/revision provenance belongs to the chosen
 skills installer's lock file; `.beligent/setup-state.json` records project
 integration ownership and baseline hashes.
 
@@ -17,9 +17,11 @@ No automatic update job or migration runs in the background. A skill update does
 not implicitly perform either of the other operations.
 
 The npm CLI is optional tooling. Its `validate` and `doctor` commands are
-read-only; publishing the npm package is a separate release operation. Maintainers
-can run `npm run validate:package` to build the CLI, check version agreement,
-and inspect the `npm pack --dry-run` allowlist before any manual publish.
+read-only. `migrate-config` defaults to a read-only preview and writes only with
+explicit `--write --confirm`; publishing the npm package is a separate release
+operation. Maintainers can run `npm run validate:package` to build the CLI,
+check version agreement, and inspect the `npm pack --dry-run` allowlist before
+any manual publish.
 
 ## Update installed skills
 
@@ -55,8 +57,22 @@ templates changing does not authorize regenerating project documents.
 
 Newer skills check schema compatibility before affected writes. Unsupported
 schemas stop the operation with a clear migration proposal; the skill must not
-ignore the file or replace it with a current default. Version 0.1.0 ships only
-schema 1 and does not invent migrations from older formats.
+ignore the file or replace it with a current default. Version 0.1.0 supports
+schemas 1 and 2. Schema-1 projects retain their existing semantics unchanged.
+
+Preview a schema-1 migration before writing it:
+
+```sh
+npx @beligent/sdd-framework migrate-config
+npx @beligent/sdd-framework migrate-config --write --confirm
+```
+
+The compatibility preview maps `lightweight` to `light + current-task` and
+`standard` to `rigorous + current-task`, while preserving paths, provider, and
+legacy profile fields. To explicitly adopt the new recommended workflow policy,
+preview and confirm with `--adopt-recommended-workflow`. A schema-2 input is a
+no-op, so the migration is idempotent. Workflow rigor is policy only until a
+later lifecycle increment; it does not change readiness or approvals here.
 
 For a real future schema change, the proposal must identify the current and
 target schema, exact JSON diff, treatment of existing/custom fields, changed

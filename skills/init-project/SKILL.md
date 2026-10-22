@@ -12,9 +12,13 @@ repository. This is an instruction-based setup workflow, not an installer.
 
 Read the target repository's applicable instructions first. Confirm its root,
 project name and type, selected assistant(s), technologies, workflow profile,
-and desired artifact locations. Infer ordinary choices from the request and
-repository; surface unresolved choices in the setup proposal. If application
-code or established conventions exist, use `adopt-project` instead.
+and desired artifact locations. For a new schema-2 configuration, propose one
+concise batch of workflow, testing, and delivery defaults: standard rigor,
+current-task design depth, ask before expansion, risk-proportionate checks, and
+feature-branch delivery with push confirmation. Ask only for deviations that
+matter to the project; these values are stable project context, not task text.
+If application code or established conventions exist, use `adopt-project`
+instead.
 
 ## Procedure
 
@@ -28,8 +32,9 @@ code or established conventions exist, use `adopt-project` instead.
    for unresolved material choices rather than inventing them.
 4. Complete the procedure's entire preflight before creating any file or
    directory. Apply only the authorized conflict-free plan, then verify it.
-5. Report created paths, preserved paths, selected profile and technologies,
-   discovery locations, and any remaining installation or live assistant checks.
+5. Report created paths, preserved paths, selected profile, workflow, testing,
+   delivery policies and technologies, discovery locations, and any remaining
+   installation or live assistant checks.
 
 ## Outputs and validation
 
@@ -41,7 +46,7 @@ Use [config.json](assets/config.json),
 for the chosen project; preserve existing configuration and documentation.
 Create `.beligent/setup-state.json` using the documented ownership schema.
 
-Verify schema 1, local paths, managed-section uniqueness, baseline hashes,
+Verify schema 1 or 2, local paths, managed-section uniqueness, baseline hashes,
 selected assistant discovery, and repeat setup producing no byte changes. Do
 not scaffold an application, add dependencies, initialize Git, publish, or approve
 implementation as part of this skill. Instruction discovery is documented

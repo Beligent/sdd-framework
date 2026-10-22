@@ -1,10 +1,12 @@
 import { lstatSync, readFileSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import { Ajv2020 } from 'ajv/dist/2020.js';
-import schema from '../../schema/config.schema.json' with { type: 'json' };
+import schema1 from '../../schema/config.schema.json' with { type: 'json' };
+import schema2 from '../../schema/config-v2.schema.json' with { type: 'json' };
 
 const ajv = new Ajv2020({ allErrors: true, strict: false });
-const validateSchema = ajv.compile(schema);
+const validateSchema1 = ajv.compile(schema1);
+const validateSchema2 = ajv.compile(schema2);
 const reservedFiles = new Set([
   'AGENTS.md', 'CLAUDE.md', '.claude/CLAUDE.md', '.github/copilot-instructions.md',
   '.beligent/config.json', '.beligent/setup-state.json', 'skills-lock.json',
@@ -12,20 +14,61 @@ const reservedFiles = new Set([
 const reservedDirectories = ['.git', '.agents/skills', '.claude/skills', '.github/skills', '.codex/skills'];
 
 export interface ConfigIssue { path?: string; message: string }
-export type ProjectConfig = {
-  schema_version: 1;
+type LegacyProfile = { artifacts: string[]; approvals: string[] };
+type SharedProjectConfig = {
   project: { name: string; type: string };
   assistants: string[];
   profile: string;
   technologies: string[];
   artifacts: Record<string, string>;
   tickets: { provider: 'markdown'; paths: { epics: string; tickets: string } };
-  profiles: Record<string, { artifacts: string[]; approvals: string[] }>;
+  profiles: Record<string, LegacyProfile>;
+};
+export type Schema1ProjectConfig = SharedProjectConfig & {
+  schema_version: 1;
+};
+export type Schema2ProjectConfig = SharedProjectConfig & {
+  schema_version: 2;
+  workflow: { rigor: 'light' | 'standard' | 'rigorous'; design_depth: 'current-task' | 'near-term' | 'comprehensive'; ask_before_expansion: boolean };
+  testing: {
+    lint: 'always' | 'when-relevant' | 'never'; typecheck: 'always' | 'when-relevant' | 'never';
+    unit: 'always' | 'when-relevant' | 'never'; integration: 'always' | 'when-relevant' | 'never';
+    e2e: 'always' | 'when-relevant' | 'critical-user-journeys' | 'never';
+    accessibility: 'always' | 'when-relevant' | 'affected-ui' | 'never';
+    security: 'always' | 'when-relevant' | 'risk-based' | 'never'; performance: 'always' | 'when-relevant' | 'risk-based' | 'never';
+    tdd: 'always' | 'when-useful' | 'never'; manual: 'always' | 'when-relevant' | 'never';
+  };
+  git: {
+    strategy: 'trunk' | 'feature-branches'; conventional_commits: boolean; commit_after_task: boolean; agent_may_commit: boolean;
+    push_after_commit: 'always' | 'ask' | 'never'; pull_request: 'never' | 'feature-complete' | 'always'; review_before_commit: boolean;
+    task_complete_at: 'commit' | 'push' | 'pull-request' | 'merged-pr';
+  };
+};
+export type ProjectConfig = Schema1ProjectConfig | Schema2ProjectConfig;
+
+export const schema2Defaults: Pick<Schema2ProjectConfig, 'workflow' | 'testing' | 'git'> = {
+  workflow: { rigor: 'standard', design_depth: 'current-task', ask_before_expansion: true },
+  testing: {
+    lint: 'always', typecheck: 'always', unit: 'when-relevant', integration: 'when-relevant', e2e: 'critical-user-journeys',
+    accessibility: 'affected-ui', security: 'risk-based', performance: 'risk-based', tdd: 'when-useful', manual: 'when-relevant',
+  },
+  git: {
+    strategy: 'feature-branches', conventional_commits: true, commit_after_task: true, agent_may_commit: true,
+    push_after_commit: 'ask', pull_request: 'feature-complete', review_before_commit: true, task_complete_at: 'merged-pr',
+  },
+};
+
+export type ConfigMigrationPreview = {
+  source_schema_version: 1 | 2;
+  target_schema_version: 2;
+  changed: boolean;
+  workflow_mapping: 'lightweight-to-light' | 'standard-to-rigorous' | 'custom-to-rigorous' | 'explicit-standard' | 'already-schema-2';
+  config: Schema2ProjectConfig;
 };
 
 export function validateConfig(value: unknown, projectRoot?: string, allowTemplate = false): ConfigIssue[] {
-  if (isRecord(value) && value.schema_version !== 1) {
-    return [{ path: '/schema_version', message: 'unsupported schema_version; schema 1 is required. Propose a separate migration; no files were changed.' }];
+  if (!isRecord(value) || (value.schema_version !== 1 && value.schema_version !== 2)) {
+    return [{ path: '/schema_version', message: 'unsupported schema_version; schemas 1 and 2 are supported. Propose a separate migration; no files were changed.' }];
   }
   if (isRecord(value) && isRecord(value.profiles)) {
     for (const [name, profile] of Object.entries(value.profiles)) {
@@ -34,6 +77,7 @@ export function validateConfig(value: unknown, projectRoot?: string, allowTempla
       }
     }
   }
+  const validateSchema = value.schema_version === 1 ? validateSchema1 : validateSchema2;
   if (!validateSchema(value)) {
     return (validateSchema.errors ?? []).map((error) => ({
       ...(error.instancePath ? { path: error.instancePath } : {}),
@@ -131,14 +175,39 @@ function checkPathRelationships(config: ProjectConfig, issues: ConfigIssue[]): v
 export function parseConfig(text: string): unknown {
   const schemaVersionToken = rejectDuplicateKeys(text);
   const parsed = JSON.parse(text) as unknown;
-  if (isRecord(parsed) && parsed.schema_version === 1 && schemaVersionToken !== '1') {
-    throw new SyntaxError('schema_version must be the JSON integer 1');
+  if (isRecord(parsed) && (parsed.schema_version === 1 || parsed.schema_version === 2) && schemaVersionToken !== String(parsed.schema_version)) {
+    throw new SyntaxError(`schema_version must be the JSON integer ${parsed.schema_version}`);
   }
   return parsed;
 }
 
 export async function loadConfig(configPath: string): Promise<unknown> {
   return parseConfig(readFileSync(configPath, 'utf8'));
+}
+
+export function previewConfigMigration(value: unknown, adoptRecommendedWorkflow = false): ConfigMigrationPreview {
+  const issues = validateConfig(value);
+  if (issues.length) throw new Error(`Cannot migrate invalid configuration: ${issues.map((issue) => `${issue.path ?? 'config'} ${issue.message}`).join('; ')}`);
+  const config = value as ProjectConfig;
+  if (config.schema_version === 2) {
+    return { source_schema_version: 2, target_schema_version: 2, changed: false, workflow_mapping: 'already-schema-2', config: structuredClone(config) };
+  }
+  const workflow_mapping = adoptRecommendedWorkflow
+    ? 'explicit-standard'
+    : config.profile === 'lightweight'
+      ? 'lightweight-to-light'
+      : config.profile === 'standard'
+        ? 'standard-to-rigorous'
+        : 'custom-to-rigorous';
+  const rigor = workflow_mapping === 'lightweight-to-light' ? 'light' : workflow_mapping === 'explicit-standard' ? 'standard' : 'rigorous';
+  const migrated: Schema2ProjectConfig = {
+    ...structuredClone(config),
+    schema_version: 2,
+    workflow: { ...schema2Defaults.workflow, rigor },
+    testing: structuredClone(schema2Defaults.testing),
+    git: structuredClone(schema2Defaults.git),
+  };
+  return { source_schema_version: 1, target_schema_version: 2, changed: true, workflow_mapping, config: migrated };
 }
 
 function rejectDuplicateKeys(text: string): string | undefined {

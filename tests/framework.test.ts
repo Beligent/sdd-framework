@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { stringify } from 'yaml';
-import { parseConfig, validateConfig, type ProjectConfig } from '../src/validation/config.js';
+import { parseConfig, previewConfigMigration, validateConfig, type ProjectConfig, type Schema1ProjectConfig, type Schema2ProjectConfig } from '../src/validation/config.js';
 import { localLinkErrors, parseFrontmatter, validateProjectRecords, validateRepository } from '../src/validation/repository.js';
 import { mappings, syncAssets } from '../src/packaging/sync-assets.js';
 
@@ -19,11 +19,19 @@ async function tempdir(): Promise<string> {
 }
 afterEach(async () => { await Promise.all(temporary.splice(0).map((dir) => rm(dir, { recursive: true, force: true }))); });
 
-async function templateConfig(): Promise<ProjectConfig> {
+async function templateConfig(): Promise<Schema2ProjectConfig> {
   const text = await readFile(path.join(root, 'skills/init-project/assets/config.json'), 'utf8');
-  const config = JSON.parse(text) as ProjectConfig;
+  const config = JSON.parse(text) as Schema2ProjectConfig;
   config.project = { name: 'Fixture project', type: 'existing application' };
   return config;
+}
+
+async function schema1Config(): Promise<Schema1ProjectConfig> {
+  const config = structuredClone(await templateConfig()) as Record<string, unknown>;
+  delete config.workflow;
+  delete config.testing;
+  delete config.git;
+  return { ...config, schema_version: 1 } as Schema1ProjectConfig;
 }
 
 async function writeArtifact(file: string, metadata: Record<string, unknown>, body: string): Promise<void> {
@@ -32,9 +40,8 @@ async function writeArtifact(file: string, metadata: Record<string, unknown>, bo
 }
 
 describe('consumer configuration validation', () => {
-  it('accepts valid schema 1 config and the project template', async () => {
-    const config = await templateConfig();
-    expect(validateConfig(config)).toEqual([]);
+  it('accepts valid schema 1 config and the schema 2 project template', async () => {
+    expect(validateConfig(await schema1Config())).toEqual([]);
     expect(validateConfig(JSON.parse(await readFile(path.join(root, 'skills/init-project/assets/config.json'), 'utf8')), undefined, true)).toEqual([]);
   });
 
@@ -59,10 +66,10 @@ describe('consumer configuration validation', () => {
   it('calls unknown schema versions out separately and never migrates input', async () => {
     const config = await templateConfig();
     const before = structuredClone(config);
-    const errors = validateConfig({ ...config, schema_version: 2 });
+    const errors = validateConfig({ ...config, schema_version: 3 });
     expect(errors[0]?.message).toContain('separate migration');
     expect(config).toEqual(before);
-    for (const schemaVersion of [true, false, 0, 2, null, '1']) {
+    for (const schemaVersion of [true, false, 0, 3, null, '1']) {
       const issue = validateConfig({ ...config, schema_version: schemaVersion });
       expect(issue[0]?.message).toContain('separate migration');
     }
@@ -78,7 +85,7 @@ describe('consumer configuration validation', () => {
   });
 
   it('preserves schema 1 standard defaults and rejects vNext configuration fields', async () => {
-    const config = await templateConfig();
+    const config = await schema1Config();
     expect(config.schema_version).toBe(1);
     expect(config.profile).toBe('standard');
     expect(config.profiles.standard).toEqual({
@@ -88,11 +95,43 @@ describe('consumer configuration validation', () => {
     expect(validateConfig({ ...config, workflow: { rigor: 'standard' } }).length).toBeGreaterThan(0);
   });
 
+  it.each(['light', 'standard', 'rigorous'] as const)('accepts schema 2 rigor %s independently of design depth', async (rigor) => {
+    const config = await templateConfig();
+    config.workflow.rigor = rigor;
+    expect(validateConfig(config)).toEqual([]);
+  });
+
+  it.each(['current-task', 'near-term', 'comprehensive'] as const)('accepts schema 2 design depth %s independently of rigor', async (designDepth) => {
+    const config = await templateConfig();
+    config.workflow.design_depth = designDepth;
+    expect(validateConfig(config)).toEqual([]);
+  });
+
+  it('rejects invalid schema 2 policy values and unknown configuration keys', async () => {
+    const config = await templateConfig();
+    expect(validateConfig({ ...config, workflow: { ...config.workflow, rigor: 'casual' } }).length).toBeGreaterThan(0);
+    expect(validateConfig({ ...config, workflow: { ...config.workflow, design_depth: 'forever' } }).length).toBeGreaterThan(0);
+    expect(validateConfig({ ...config, workflow: { ...config.workflow, extra: true } }).length).toBeGreaterThan(0);
+    expect(validateConfig({ ...config, testing: { ...config.testing, unit: 'sometimes' } }).length).toBeGreaterThan(0);
+    expect(validateConfig({ ...config, git: { ...config.git, push_after_commit: 'maybe' } }).length).toBeGreaterThan(0);
+    expect(validateConfig({ ...config, git: { ...config.git, extra: true } }).length).toBeGreaterThan(0);
+    expect(validateConfig({ ...config, unexpected: true }).length).toBeGreaterThan(0);
+  });
+
+  it('uses the recommended schema 2 workflow, testing, and delivery defaults', async () => {
+    const config = await templateConfig();
+    expect(config.workflow).toEqual({ rigor: 'standard', design_depth: 'current-task', ask_before_expansion: true });
+    expect(config.testing).toMatchObject({ lint: 'always', typecheck: 'always', unit: 'when-relevant', e2e: 'critical-user-journeys', accessibility: 'affected-ui', security: 'risk-based' });
+    expect(config.git).toMatchObject({ strategy: 'feature-branches', conventional_commits: true, push_after_commit: 'ask', pull_request: 'feature-complete', task_complete_at: 'merged-pr' });
+    expect(validateConfig(config)).toEqual([]);
+  });
+
   it('rejects duplicate keys at any JSON depth and invalid JSON constants', () => {
     expect(() => parseConfig('{"a":1,"a":2}')).toThrow('Duplicate JSON key');
     expect(() => parseConfig('{"a":{"b":1,"b":2}}')).toThrow('Duplicate JSON key');
     expect(() => parseConfig('{"x":NaN}')).toThrow();
     expect(() => parseConfig('{"schema_version":1.0}')).toThrow('JSON integer 1');
+    expect(() => parseConfig('{"schema_version":2.0}')).toThrow('JSON integer 2');
   });
 
   it.each(['../outside', '/absolute', 'C:/outside', 'docs\\outside', './docs', 'docs//work', 'AGENTS.md', '.beligent/config.json', '.agents/skills/x', '{{path}}'])('rejects unsafe or reserved path %s', async (value) => {
@@ -148,6 +187,36 @@ describe('consumer configuration validation', () => {
     await link(shared, hardlinked);
     config.artifacts.overview = 'hardlinked.md';
     expect(validateConfig(config, project).some((issue) => issue.message.includes('hard-linked'))).toBe(true);
+  });
+
+  it('previews an idempotent schema 1 migration without changing legacy paths or provider settings', async () => {
+    const config = await schema1Config();
+    config.profile = 'lightweight';
+    config.artifacts.overview = 'handbook/context.md';
+    config.tickets.paths = { epics: 'planning/epics', tickets: 'planning/tickets' };
+    const preview = previewConfigMigration(config);
+    expect(preview.changed).toBe(true);
+    expect(preview.workflow_mapping).toBe('lightweight-to-light');
+    expect(preview.config.workflow).toEqual({ rigor: 'light', design_depth: 'current-task', ask_before_expansion: true });
+    expect(preview.config.artifacts).toEqual(config.artifacts);
+    expect(preview.config.tickets).toEqual(config.tickets);
+    const repeated = previewConfigMigration(preview.config);
+    expect(repeated.changed).toBe(false);
+    expect(repeated.workflow_mapping).toBe('already-schema-2');
+    expect(repeated.config).toEqual(preview.config);
+  });
+
+  it('maps schema 1 standard conservatively and permits explicit adoption of the new standard policy', async () => {
+    const config = await schema1Config();
+    const compatible = previewConfigMigration(config);
+    expect(compatible.workflow_mapping).toBe('standard-to-rigorous');
+    expect(compatible.config.workflow.rigor).toBe('rigorous');
+    expect(compatible.config.profile).toBe('standard');
+    expect(compatible.config.profiles).toEqual(config.profiles);
+    const recommended = previewConfigMigration(config, true);
+    expect(recommended.workflow_mapping).toBe('explicit-standard');
+    expect(recommended.config.workflow.rigor).toBe('standard');
+    expect(recommended.config.workflow.design_depth).toBe('current-task');
   });
 });
 
@@ -265,7 +334,7 @@ describe('repository and artifact validation', () => {
   it('validates the copied Copilot fragment from its eventual project destination', async () => {
     const project = await tempdir();
     await writeFile(path.join(project, 'AGENTS.md'), '# Existing instructions\n');
-    const config = await templateConfig();
+    const config = await schema1Config();
     await mkdir(path.join(project, '.beligent'), { recursive: true });
     await writeFile(path.join(project, '.beligent/config.json'), JSON.stringify(config));
     await mkdir(path.join(project, '.github'), { recursive: true });
@@ -324,7 +393,7 @@ describe('repository and artifact validation', () => {
 
   it('keeps schema 1 lightweight tickets ready with local criteria and no separate requirement or specification', async () => {
     const project = await tempdir();
-    const config = await templateConfig();
+    const config = await schema1Config();
     config.profile = 'lightweight';
     await writeArtifact(path.join(project, config.tickets.paths.tickets, 'TICKET-001.md'), {
       id: 'TICKET-001', kind: 'ticket', title: 'Small isolated change', status: 'todo', readiness: 'ready', priority: 'low',
@@ -420,9 +489,26 @@ describe('CLI', () => {
     const config = await templateConfig();
     await writeFile(path.join(project, '.beligent/config.json'), JSON.stringify(config));
     expect(run(['validate', '--config', path.join(project, '.beligent/config.json')]).status).toBe(0);
-    config.schema_version = 3 as 1;
-    await writeFile(path.join(project, '.beligent/config.json'), JSON.stringify(config));
+    await writeFile(path.join(project, '.beligent/config.json'), JSON.stringify({ ...config, schema_version: 3 }));
     expect(run(['validate', '--config', path.join(project, '.beligent/config.json')]).status).toBe(1);
+  });
+
+  it('previews before an explicitly confirmed schema migration and preserves the compatibility mapping', async () => {
+    const project = await tempdir();
+    const configPath = path.join(project, '.beligent', 'config.json');
+    await mkdir(path.dirname(configPath), { recursive: true });
+    await writeFile(configPath, JSON.stringify(await schema1Config(), null, 2));
+    const preview = run(['migrate-config', '--config', configPath]);
+    expect(preview.status).toBe(0);
+    expect(preview.stdout).toContain('"workflow_mapping": "standard-to-rigorous"');
+    expect((JSON.parse(await readFile(configPath, 'utf8')) as ProjectConfig).schema_version).toBe(1);
+    expect(run(['migrate-config', '--config', configPath, '--write']).status).toBe(2);
+    const write = run(['migrate-config', '--config', configPath, '--adopt-recommended-workflow', '--write', '--confirm']);
+    expect(write.status).toBe(0);
+    const migrated = JSON.parse(await readFile(configPath, 'utf8')) as Schema2ProjectConfig;
+    expect(migrated.schema_version).toBe(2);
+    expect(migrated.workflow.rigor).toBe('standard');
+    expect(run(['migrate-config', '--config', configPath]).stdout).toContain('"changed": false');
   });
 
   it('doctor reports missing config and warns about absent skills without modifying the target', async () => {
@@ -443,7 +529,7 @@ describe('CLI', () => {
     await writeFile(path.join(project, '.agents/skills/init-project/SKILL.md'), '---\nname: init-project\ndescription: setup\n---\n');
     const result = run(['doctor', project]);
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain('OK configuration: schema 1');
+    expect(result.stdout).toContain('OK configuration: schema 2, profile standard, rigor standard, design depth current-task');
     expect(result.stdout).toContain('init-project');
     expect(result.stderr).toContain('WARN skills not found');
   });

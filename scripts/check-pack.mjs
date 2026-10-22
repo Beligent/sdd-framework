@@ -24,7 +24,7 @@ const problems = [];
 for (const skill of ['init-project', 'adopt-project', 'define-work', 'plan-work', 'implement-ticket', 'verify-work']) {
   if (!files.includes(`skills/${skill}/SKILL.md`)) problems.push(`Missing published skill entrypoint: ${skill}`);
 }
-for (const required of ['README.md', 'LICENSE', 'CHANGELOG.md', 'VERSION', 'package.json', 'dist/cli/index.js', 'schema/config.schema.json']) {
+for (const required of ['README.md', 'LICENSE', 'CHANGELOG.md', 'VERSION', 'package.json', 'dist/cli/index.js', 'schema/config.schema.json', 'schema/config-v2.schema.json']) {
   if (!files.includes(required)) problems.push(`Missing required package file: ${required}`);
 }
 for (const file of files) {

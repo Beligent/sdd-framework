@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "project": {
     "name": "{{project_name}}",
     "type": "{{project_type}}"
@@ -33,5 +33,32 @@
       "artifacts": ["overview", "requirements", "specification", "plan", "ticket"],
       "approvals": ["scope", "implementation", "completion"]
     }
+  },
+  "workflow": {
+    "rigor": "standard",
+    "design_depth": "current-task",
+    "ask_before_expansion": true
+  },
+  "testing": {
+    "lint": "always",
+    "typecheck": "always",
+    "unit": "when-relevant",
+    "integration": "when-relevant",
+    "e2e": "critical-user-journeys",
+    "accessibility": "affected-ui",
+    "security": "risk-based",
+    "performance": "risk-based",
+    "tdd": "when-useful",
+    "manual": "when-relevant"
+  },
+  "git": {
+    "strategy": "feature-branches",
+    "conventional_commits": true,
+    "commit_after_task": true,
+    "agent_may_commit": true,
+    "push_after_commit": "ask",
+    "pull_request": "feature-complete",
+    "review_before_commit": true,
+    "task_complete_at": "merged-pr"
   }
 }

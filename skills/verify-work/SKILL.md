@@ -11,7 +11,7 @@ whether the work is ready for a human acceptance decision.
 ## Preconditions and inputs
 
 Read applicable instructions and `.beligent/config.json`. This skill supports
-`schema_version: 1`; use its artifact paths, profile, conventions and provider.
+`schema_version: 1` and `schema_version: 2`; use its artifact paths, profile, conventions and provider.
 Missing configuration permits an explicitly unconfigured review/proposal without
 persisted artifacts; otherwise use setup first. Unsupported schemas require a
 migration proposal before affected writes. Do not initialize or reconfigure the

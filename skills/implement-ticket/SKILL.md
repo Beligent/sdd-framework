@@ -11,7 +11,7 @@ Keep requirements and expected behavior in their existing management artifacts.
 ## Preconditions and inputs
 
 Read applicable repository instructions and `.beligent/config.json`. This skill
-supports `schema_version: 1`. Use its artifact locations, profile, conventions
+supports `schema_version: 1` and `schema_version: 2`. Use its artifact locations, profile, conventions
 and technology modules. Missing configuration permits an explicitly unconfigured
 investigation/proposal without persisted artifacts; otherwise use setup first.
 Unsupported schemas require a migration proposal before affected writes. Do not

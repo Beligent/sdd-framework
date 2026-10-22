@@ -24,7 +24,7 @@ npx skills@1.7.2 add Beligent/sdd-framework --skill '*' --agent codex --copy -y
 
 Choose the intended agent, for example `claude-code`, `github-copilot`, or
 `cursor`. The installer puts the skill folders in the selected agent's project
-discovery location. `skills add @beligent/sdd` is not supported: the installer
+discovery location. `skills add @beligent/sdd-framework` is not supported: the installer
 accepts Git repositories, local paths, and supported URLs, while npm provides
 the separate optional CLI below.
 
@@ -74,8 +74,8 @@ Node.js 22 or later is required for the CLI. The skills themselves have no
 runtime dependency and do not require Python in consumer projects.
 
 ```sh
-npx @beligent/sdd validate
-npx @beligent/sdd doctor
+npx @beligent/sdd-framework validate
+npx @beligent/sdd-framework doctor
 ```
 
 `validate` checks `.beligent/config.json` without changing it. `doctor` reports

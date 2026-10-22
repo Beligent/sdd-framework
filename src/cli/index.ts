@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import { access, readFile } from 'node:fs/promises';
+import { access, lstat, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadConfig, parseConfig, validateConfig, type ProjectConfig } from '../validation/config.js';
+import { loadConfig, parseConfig, previewConfigMigration, validateConfig, type ProjectConfig } from '../validation/config.js';
 
 const root = process.cwd();
 const packagePath = fileURLToPath(new URL('../../package.json', import.meta.url));
@@ -33,6 +33,66 @@ async function validate(args: string[]): Promise<number> {
     return 0;
   } catch (error) {
     console.error(`Cannot validate ${configPath}: ${error instanceof Error ? error.message : String(error)}`);
+    return 1;
+  }
+}
+
+type MigrationOptions = { configPath: string; adoptRecommendedWorkflow: boolean; write: boolean; confirm: boolean };
+
+function parseMigrationOptions(args: string[]): MigrationOptions | undefined {
+  let configPath = path.join(root, '.beligent', 'config.json');
+  let adoptRecommendedWorkflow = false;
+  let write = false;
+  let confirm = false;
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--config' && args[index + 1]) { configPath = path.resolve(root, args[index + 1]!); index += 1; }
+    else if (arg === '--adopt-recommended-workflow') adoptRecommendedWorkflow = true;
+    else if (arg === '--write') write = true;
+    else if (arg === '--confirm') confirm = true;
+    else return undefined;
+  }
+  return { configPath, adoptRecommendedWorkflow, write, confirm };
+}
+
+async function migrateConfig(args: string[]): Promise<number> {
+  const options = parseMigrationOptions(args);
+  if (!options || (options.write && !options.confirm) || (options.confirm && !options.write)) {
+    console.error('Usage: sdd migrate-config [--config <path>] [--adopt-recommended-workflow] [--write --confirm]');
+    return 2;
+  }
+  try {
+    const before = await readFile(options.configPath, 'utf8');
+    const info = await lstat(options.configPath);
+    if (info.isSymbolicLink() || info.nlink > 1) {
+      console.error(`Refusing to migrate linked configuration: ${options.configPath}`);
+      return 1;
+    }
+    const preview = previewConfigMigration(parseConfig(before), options.adoptRecommendedWorkflow);
+    console.log(JSON.stringify({
+      source_schema_version: preview.source_schema_version,
+      target_schema_version: preview.target_schema_version,
+      changed: preview.changed,
+      workflow_mapping: preview.workflow_mapping,
+      config: preview.config,
+    }, null, 2));
+    if (!options.write) {
+      console.log('\nPreview only. Review this output, then rerun with --write --confirm to apply it.');
+      return 0;
+    }
+    if (!preview.changed) {
+      console.log('Configuration is already schema 2; no write was needed.');
+      return 0;
+    }
+    if (await readFile(options.configPath, 'utf8') !== before) {
+      console.error(`Configuration changed while preparing migration: ${options.configPath}`);
+      return 1;
+    }
+    await writeFile(options.configPath, `${JSON.stringify(preview.config, null, 2)}\n`, 'utf8');
+    console.log(`Migrated configuration: ${options.configPath}`);
+    return 0;
+  } catch (error) {
+    console.error(`Cannot migrate configuration: ${error instanceof Error ? error.message : String(error)}`);
     return 1;
   }
 }
@@ -68,7 +128,8 @@ async function doctor(args: string[]): Promise<number> {
         for (const issue of issues) console.error(`  ${issue.path ? `${issue.path}: ` : ''}${issue.message}`);
         failures += 1;
       } else {
-        console.log(`OK configuration: schema ${config.schema_version}, profile ${config.profile}`);
+        const workflow = config.schema_version === 2 ? `, rigor ${config.workflow.rigor}, design depth ${config.workflow.design_depth}` : '';
+        console.log(`OK configuration: schema ${config.schema_version}, profile ${config.profile}${workflow}`);
         for (const [name, configuredPath] of Object.entries(config.artifacts)) {
           const target = path.join(projectRoot, configuredPath);
           if (!(await exists(target))) console.log(`INFO artifact path not created yet: ${name} -> ${configuredPath}`);
@@ -104,9 +165,10 @@ async function main(): Promise<void> {
   switch (command) {
     case 'version': status = await version(); break;
     case 'validate': status = await validate(args); break;
+    case 'migrate-config': status = await migrateConfig(args); break;
     case 'doctor': status = await doctor(args); break;
     case '--help': case '-h': case undefined:
-      console.log('Beligent SDD tooling\n\nUsage: sdd <command>\n\nCommands:\n  validate [--config <path>]  Validate project configuration\n  doctor [project-path]       Diagnose configuration and installed skills\n  version                     Print the framework version');
+      console.log('Beligent SDD tooling\n\nUsage: sdd <command>\n\nCommands:\n  validate [--config <path>]  Validate project configuration\n  migrate-config [--config <path>] [--adopt-recommended-workflow] [--write --confirm]\n                              Preview or explicitly apply a schema-1 to schema-2 migration\n  doctor [project-path]       Diagnose configuration and installed skills\n  version                     Print the framework version');
       status = command === undefined ? 2 : 0;
       break;
     default:

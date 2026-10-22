@@ -33,7 +33,7 @@ all runtime references, templates, and shared resources. The CLI installs the
 whole skill directory. Do not install only the entrypoint file.
 
 The `skills` command does not resolve npm package names as skill sources. Use a
-Git source with `skills add`; do not run `skills add @beligent/sdd`. The current
+Git source with `skills add`; do not run `skills add @beligent/sdd-framework`. The current
 installer accepts Git sources, local paths, and supported direct file/archive
 URLs. npm distribution is for the optional Beligent CLI, not a replacement for
 the Git skill collection.
@@ -83,8 +83,8 @@ and [maintenance](maintenance.md) for the ownership and update boundaries.
 Install the CLI on demand with Node.js 22 or later:
 
 ```sh
-npx @beligent/sdd validate
-npx @beligent/sdd doctor
+npx @beligent/sdd-framework validate
+npx @beligent/sdd-framework doctor
 ```
 
 `validate` checks `.beligent/config.json` and reports errors without changing
@@ -92,7 +92,7 @@ files. `doctor` diagnoses config validity, expected artifact paths, and core
 skill discovery. It can also inspect another project directory:
 
 ```sh
-npx @beligent/sdd doctor /path/to/project
+npx @beligent/sdd-framework doctor /path/to/project
 ```
 
 This CLI does not initialize, adopt, update, or uninstall a project. Those

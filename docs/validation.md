@@ -48,11 +48,11 @@ file list against the publishing allowlist. It does not publish.
 The npm CLI can validate a consumer project from that project's directory:
 
 ```sh
-npx @beligent/sdd validate
-npx @beligent/sdd doctor
+npx @beligent/sdd-framework validate
+npx @beligent/sdd-framework doctor
 ```
 
-`validate` checks the schema-1 `.beligent/config.json`, duplicate JSON keys,
+`validate` checks schema-1 or schema-2 `.beligent/config.json`, duplicate JSON keys,
 safe paths, filesystem links, required profile gates, and output collisions.
 It is read-only. `doctor` reports config status, configured artifact paths, and
 whether core skills exist in known project locations. Missing skill copies are

@@ -1,10 +1,11 @@
 # Customization
 
 Edit the consumer project's `.beligent/config.json` to select its profile,
-assistant(s), technologies, artifact paths and Markdown ticket locations. Start
-from the [schema-1 template](../skills/init-project/assets/config.json). Paths are
-relative to the project root and must resolve inside it. Validate a configuration
-with `npx @beligent/sdd validate`; this read-only check does not modify the project.
+assistant(s), technologies, artifact paths and Markdown ticket locations. New
+projects start from the [schema-2 template](../skills/init-project/assets/config.json).
+Paths are relative to the project root and must resolve inside it. Validate a
+configuration with `npx @beligent/sdd-framework validate`; this read-only check
+does not modify the project.
 
 Reuse existing documentation/backlog locations during adoption. Record
 project-specific coding conventions under the configured conventions location
@@ -16,8 +17,27 @@ Agent Skills-compatible tools can be recorded without changing artifact rules.
 Validate a project with the optional Node.js CLI, which does not write files:
 
 ```sh
-npx @beligent/sdd validate
+npx @beligent/sdd-framework validate
 ```
+
+## Workflow policy
+
+Schema 2 separates workflow rigor from design-ahead depth. `workflow.rigor` is
+`light`, `standard`, or `rigorous`; `workflow.design_depth` is `current-task`,
+`near-term`, or `comprehensive`; `ask_before_expansion` controls whether the
+assistant must ask before expanding beyond the selected depth. New projects use
+`standard`, `current-task`, and `true`.
+
+This increment stores policy only. The existing `profile` and `profiles` fields
+continue to govern artifact, readiness, and approval behavior until a later
+lifecycle increment changes that contract. Keep workflow, testing, and delivery
+preferences in project configuration rather than repeating them in task records.
+
+`testing` states project preferences for lint, typecheck, unit, integration,
+E2E, accessibility, security, performance, TDD, and manual validation. `git`
+states branch strategy, conventional commits, commit permission, push policy,
+PR policy, review timing, and the delivery point that completes a task. These
+fields do not yet automate checks, commits, pushes, or pull requests.
 
 Profiles define required artifact kinds and decisions. Reduce paperwork by
 putting a lightweight contract, plan and evidence in a ticket. Add project-specific
