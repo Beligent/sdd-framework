@@ -32,6 +32,13 @@ ineffective symptom fixes now stop `develop-task` in `diagnosis-required` before
 another corrective attempt. Diagnosis remains independently invocable and does
 not silently implement fixes or expand design depth.
 
+Added `deliver-work` as the ninth public skill. It takes one verified task from
+`ready-for-delivery` through the schema-2 Git policy for commit, push, and
+pull-request creation, stopping at the configured completion point. It excludes
+unrelated changes, requires explicit delivery direction for schema 1, and does
+not force push, rewrite history, merge without authorization, or perform feature
+work.
+
 ## 0.1.0 — 2026-10-18
 
 Initial framework: six portable skills, four management workflow entry points,

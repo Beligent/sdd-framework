@@ -5,7 +5,7 @@ teams that use coding agents. It gives product decisions, implementation work,
 and verification a shared Markdown record, so work can be reviewed and traced
 from a requirement through observable behavior and evidence.
 
-The framework is delivered as eight portable Agent Skills. The methodology stays
+The framework is delivered as nine portable Agent Skills. The methodology stays
 in Markdown and works with Codex, Claude Code, GitHub Copilot, Cursor, and other
 Agent Skills-compatible assistants. Optional TypeScript tooling validates
 configuration and diagnoses a project; it does not replace the skills or run an
@@ -64,11 +64,13 @@ architecture decisions and implementation plans. `implement-ticket` works only
 within an approved scope; `verify-work` traces the result to evidence and prepares
 a human completion decision.
 
-The eight skills are `init-project`, `adopt-project`, `define-work`, `plan-work`,
-`implement-ticket`, `verify-work`, `develop-task`, and `diagnose`. Use `develop-task` for the
+The nine skills are `init-project`, `adopt-project`, `define-work`, `plan-work`,
+`implement-ticket`, `verify-work`, `develop-task`, `diagnose`, and `deliver-work`. Use `develop-task` for the
 normal one-task path through definition, optional planning, implementation, and
 verification, stopping before Git delivery. Use `diagnose` for independent
-root-cause investigation without silently implementing a correction. Markdown tickets are the initial provider;
+root-cause investigation without silently implementing a correction. Use
+`deliver-work` to commit, push, or open a PR within project policy after the task
+is ready for delivery. Markdown tickets are the initial provider;
 the documented provider contract leaves room for future issue trackers.
 
 ## Optional npm tooling
@@ -89,7 +91,7 @@ npm package is an optional companion to the GitHub collection.
 ## Project maturity
 
 Version 0.1.0 is an early public-development release. The repository includes
-the eight skills, a worked artifact example, deterministic skill packaging,
+the nine skills, a worked artifact example, deterministic skill packaging,
 configuration/repository validation, and local installer checks. Actual behavior
 still depends on the coding agent and its discovery surface; the framework does
 not enforce human approval as a security boundary or certify application tests.

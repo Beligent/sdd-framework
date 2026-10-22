@@ -23,7 +23,7 @@ npx skills@1.7.2 add beligent/sdd \
 Select the target assistant with `--agent`, for example `claude-code`,
 `github-copilot`, or `cursor`. The installer supports additional agents as its
 catalog evolves. Check [agent integration](agents.md) for documented
-discovery locations and compatibility limits. Install all eight skills with
+discovery locations and compatibility limits. Install all nine skills with
 `--skill '*'`, or select only `init-project` or `adopt-project` for the initial
 setup. Install the remaining skills before using the corresponding workflows.
 
@@ -51,7 +51,7 @@ and [adoption](adoption.md) for the respective workflows.
 
 ## Adopt an existing project
 
-Install `adopt-project` (or all eight skills), then ask it to inventory the
+Install `adopt-project` (or all nine skills), then ask it to inventory the
 repository and prepare a read-only integration plan. The skill maps existing
 architecture, specifications, tickets, test conventions, and assistant
 instructions, and recommends reuse of suitable files and paths. It must show

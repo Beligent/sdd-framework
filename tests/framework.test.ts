@@ -293,7 +293,7 @@ describe('canonical skill packaging', () => {
 });
 
 describe('repository and artifact validation', () => {
-  it('validates the checked-in eight-skill repository and worked example', async () => {
+  it('validates the checked-in nine-skill repository and worked example', async () => {
     expect(await validateRepository(root)).toEqual([]);
   });
 
@@ -354,7 +354,7 @@ describe('repository and artifact validation', () => {
   });
 
   it('discovers develop-task and preserves its deterministic orchestration decisions', async () => {
-    expect(skills).toEqual(['init-project', 'adopt-project', 'define-work', 'plan-work', 'implement-ticket', 'verify-work', 'develop-task', 'diagnose']);
+    expect(skills).toEqual(['init-project', 'adopt-project', 'define-work', 'plan-work', 'implement-ticket', 'verify-work', 'develop-task', 'diagnose', 'deliver-work']);
     const entrypoint = await readFile(path.join(root, 'skills/develop-task/SKILL.md'), 'utf8');
     const parsed = parseFrontmatter(entrypoint);
     expect(parsed.data.name).toBe('develop-task');
@@ -417,6 +417,42 @@ describe('repository and artifact validation', () => {
     expect(normalizedContract).toContain('unrelated discovery remains a concise future candidate');
     expect(normalizedContract).toContain('Process overhead appears disproportionate to the current task');
     expect(normalizedContract).toContain('Do not delete, compact, rewrite, or bypass required artifacts');
+  });
+
+  it('discovers deliver-work and applies deterministic delivery policy without real remotes', async () => {
+    const entrypoint = parseFrontmatter(await readFile(path.join(root, 'skills/deliver-work/SKILL.md'), 'utf8'));
+    const contract = await readFile(path.join(root, 'skills/deliver-work/references/delivery.md'), 'utf8');
+    expect(entrypoint.data.name).toBe('deliver-work');
+    expect(mappings().some((entry) => entry.destination === 'skills/deliver-work/references/ticket-management/contract.md')).toBe(true);
+
+    const rows = [...contract.matchAll(/^\| ([^|]+?) \| ([^|]+?) \|(?: ([^|]+?) \|)?$/gm)].map((match) => [match[1], match[2], match[3]]);
+    const state = (name: string) => rows.find((row) => row[0] === name)?.[1];
+    const policy = (setting: string, value: string) => rows.find((row) => row[0] === setting && row[1] === value)?.[2];
+    expect(state('`ready-for-delivery`')).toContain('passed preflight');
+    expect(state('`blocked`')).toContain('prerequisite');
+    expect(state('`commit`')).toContain('commit exists locally');
+    expect(state('`merged-pr`')).toContain('merge was observed');
+    expect(policy('`conventional_commits`', '`true`')).toContain('conventional commit');
+    expect(policy('`agent_may_commit`', '`false`')).toContain('must not commit');
+    expect(policy('`agent_may_commit`', '`true`')).toContain('may commit only after preflight');
+    expect(policy('`push_after_commit`', '`ask`')).toContain('Stop at `committed` and ask');
+    expect(policy('`push_after_commit`', '`always`')).toContain('Push after commit');
+    expect(policy('`pull_request`', '`always`')).toContain('Create a PR');
+    expect(policy('`pull_request`', '`never`')).toContain('Do not create a PR');
+
+    const normalizedContract = contract.replace(/\s+/g, ' ');
+    const normalizedSkill = entrypoint.body.replace(/\s+/g, ' ');
+    expect(normalizedContract).toContain('Surface unrelated modifications and exclude them');
+    expect(normalizedContract).toContain('Never force push by default');
+    expect(normalizedContract).toContain('briefly states implemented behavior, criterion references, meaningful automated results');
+    expect(normalizedContract).toContain('Never merge solely because the PR exists or checks pass');
+    expect(normalizedContract).toContain('Schema-1 projects have no framework Git policy');
+    expect(normalizedSkill).toContain('Direct invocation does not require prior use of `develop-task`');
+    expect(normalizedSkill).toContain('Do not implement, refactor, respecify, diagnose');
+    expect(normalizedSkill).toContain('or select the next task');
+    const develop = (await readFile(path.join(root, 'skills/develop-task/SKILL.md'), 'utf8')).replace(/\s+/g, ' ');
+    expect(develop).toContain('Do not commit, push, create or merge a pull request');
+    expect(develop).toContain('independently invoked `deliver-work` skill');
   });
 
   it('rejects duplicate YAML keys and links outside a skill package', async () => {
@@ -690,6 +726,7 @@ describe('CLI', () => {
     expect(result.stderr).toContain('WARN skills not found');
     expect(result.stderr).toContain('develop-task');
     expect(result.stderr).toContain('diagnose');
+    expect(result.stderr).toContain('deliver-work');
   });
 });
 

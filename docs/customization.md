@@ -40,7 +40,9 @@ and delivery preferences in project configuration rather than task records.
 E2E, accessibility, security, performance, TDD, and manual validation. `git`
 states branch strategy, conventional commits, commit permission, push policy,
 PR policy, review timing, and the delivery point that completes a task. These
-fields do not yet automate checks, commits, pushes, or pull requests.
+fields guide `deliver-work` after verified work reaches `ready-for-delivery`.
+The skill performs only actions allowed by project policy, repository state,
+host authorization, and the delivery safety contract.
 
 Profiles define required artifact kinds and decisions. Reduce paperwork by
 putting a lightweight contract, plan and evidence in a ticket. Add project-specific
@@ -71,7 +73,7 @@ single-project convention, use the project's conventions directory instead.
 
 ## Workflow and provider extensions
 
-Keep eight entry skills. Add focused management routes below `define-work` with
+Keep nine entry skills. Add focused management routes below `define-work` with
 their own input/output contracts, and update the route table. Reuse normalized
 ticket operations rather than embedding storage code in a route. A new provider
 implements the [contract](../skills/define-work/references/ticket-management/contract.md),

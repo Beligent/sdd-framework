@@ -1,7 +1,7 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
-export const skills = ['init-project', 'adopt-project', 'define-work', 'plan-work', 'implement-ticket', 'verify-work', 'develop-task', 'diagnose'];
+export const skills = ['init-project', 'adopt-project', 'define-work', 'plan-work', 'implement-ticket', 'verify-work', 'develop-task', 'diagnose', 'deliver-work'];
 const technologies = ['react-typescript', 'nextjs', 'nodejs', 'python', 'fastapi'];
 export type Mapping = { source: string; destination: string };
 
@@ -13,7 +13,7 @@ export function mappings(): Mapping[] {
   for (const skill of ['plan-work', 'implement-ticket', 'verify-work', 'develop-task']) pairs.push({ source: lifecycle, destination: `skills/${skill}/references/shared/current-task-lifecycle.md` });
   const diagnosis = 'skills/diagnose/references/shared/diagnosis-and-simplicity.md';
   for (const skill of ['define-work', 'plan-work', 'implement-ticket', 'verify-work', 'develop-task']) pairs.push({ source: diagnosis, destination: `skills/${skill}/references/shared/diagnosis-and-simplicity.md` });
-  for (const skill of ['plan-work', 'implement-ticket', 'verify-work', 'develop-task']) {
+  for (const skill of ['plan-work', 'implement-ticket', 'verify-work', 'develop-task', 'deliver-work']) {
     for (const name of ['contract.md', 'markdown.md']) pairs.push({ source: `skills/define-work/references/ticket-management/${name}`, destination: `skills/${skill}/references/ticket-management/${name}` });
   }
   for (const name of ['config.json', 'project-overview.md', 'AGENTS.fragment.md', 'CLAUDE.fragment.md', 'copilot.fragment.md']) pairs.push({ source: `skills/init-project/assets/${name}`, destination: `skills/adopt-project/assets/${name}` });

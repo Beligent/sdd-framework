@@ -101,7 +101,7 @@ const skillRoots = [
   '.agents/skills', '.claude/skills', '.github/skills', '.cursor/skills',
   '.codex/skills', '.opencode/skills', '.windsurf/skills',
 ];
-const coreSkills = ['init-project', 'adopt-project', 'define-work', 'plan-work', 'implement-ticket', 'verify-work', 'develop-task', 'diagnose'];
+const coreSkills = ['init-project', 'adopt-project', 'define-work', 'plan-work', 'implement-ticket', 'verify-work', 'develop-task', 'diagnose', 'deliver-work'];
 
 async function exists(file: string): Promise<boolean> {
   try { await access(file); return true; } catch { return false; }
@@ -154,7 +154,7 @@ async function doctor(args: string[]): Promise<number> {
   const missing = coreSkills.filter((skill) => !discovered.has(skill));
   if (discovered.size) console.log(`OK installed core skills: ${[...discovered].sort().join(', ')}`);
   if (missing.length) console.warn(`WARN skills not found in standard project locations: ${missing.join(', ')}. Install with the skills CLI for your agent.`);
-  else console.log('OK all eight core skills are discoverable in standard project locations.');
+  else console.log('OK all nine core skills are discoverable in standard project locations.');
   console.log(failures ? `Doctor found ${failures} error(s).` : 'Doctor found no configuration errors.');
   return failures ? 1 : 0;
 }

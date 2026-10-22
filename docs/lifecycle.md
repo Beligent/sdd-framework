@@ -64,3 +64,21 @@ supporting code remains valid when its connection to required behavior is clear.
 For an obviously disproportionate process, the framework warns that remaining
 specification or planning may be collapsed into the compact task. The warning
 never rewrites artifacts or bypasses required decisions automatically.
+
+## Delivery
+
+Invoke `deliver-work` for one verified task after it reaches
+`ready-for-delivery`, whether implementation was performed through
+`develop-task` or another workflow. The skill checks the selected task,
+verification evidence, manual validation, review requirements, acceptance
+criteria, repository state, and the exact task-related diff before changing
+Git state. It excludes unrelated changes and does not perform feature work.
+
+For schema 2, the configured `git` policy controls commit permission,
+conventional commit format, push behavior, pull-request creation, and the point
+at which delivery completes the task. Delivery progresses through
+`ready-for-delivery`, `committed`, `pushed`, `pr-open`, and `delivered`, or stops
+as `blocked`. A `merged-pr` completion target requires an observed merge; it
+does not authorize the skill to merge. Schema-1 projects have no framework Git
+policy, so each commit, push, pull-request, or merge action requires explicit
+delivery direction.

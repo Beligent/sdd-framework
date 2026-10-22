@@ -89,4 +89,5 @@ switch to its root-cause investigation before another corrective attempt.
 The terminal outcome is `ready-for-delivery`, pending manual validation, blocked,
 or diagnosis-required. You may propose a conventional commit message. Do not
 commit, push, create or merge a pull request, close a task from Git state, or
-claim human completion acceptance.
+claim human completion acceptance. Hand off `ready-for-delivery` work to the
+independently invoked `deliver-work` skill when repository delivery is requested.
