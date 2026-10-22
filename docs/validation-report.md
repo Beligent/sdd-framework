@@ -2,7 +2,7 @@
 
 ## Current TypeScript tooling and npm package checks
 
-Date: 2026-10-22. Framework/package version: 0.1.0. Configuration schemas: 1 and 2.
+Date: 2026-10-22. Framework/package version: 0.2.0. Configuration schemas: 1 and 2.
 
 The TypeScript migration preserves the original validation scenarios and moves
 framework-maintainer tooling out of Python. `tests/framework.test.ts` has 60
@@ -14,7 +14,7 @@ validation, CLI behavior, and package version agreement.
 | TypeScript typecheck and ESLint | Passed |
 | Vitest | 60 tests passed after Increment 7 validation |
 | Shared resource drift and full framework validation | Passed |
-| `VERSION` and `package.json` agreement | Passed at 0.1.0 |
+| `VERSION` and `package.json` agreement | Passed at 0.2.0 |
 | `npm pack --dry-run` allowlist check | Passed; 121 intentional files |
 | Packed CLI smoke | Extracted package printed version and validated the worked example configuration |
 | npm dependency audit | Zero vulnerabilities after upgrading the test runner |
