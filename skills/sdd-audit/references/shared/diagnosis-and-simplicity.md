@@ -45,19 +45,19 @@ failure that triggered the threshold.
 | `manual-validation-failure` | A requested human observation did not match the expected result |
 | `diagnosis-required` | Evidence is insufficient or repeated symptom fixes reached the threshold |
 | `specification-contradiction` | Implementable behavior conflicts with the current specification or decisions |
-| `scope-expansion-required` | A consequential cause lies outside configured design depth or approved scope |
+| `scope-expansion-required` | A consequential cause lies outside the agreed scope of the current task |
 | `unrelated-discovery` | The issue is real but does not block the current task |
 
 Report the most specific supported state and its evidence rather than a generic
 failure. An unrelated discovery remains a concise future candidate; do not
 create a ticket unless requested.
 
-## Design-depth boundary
+## Scope boundary
 
 Diagnosis does not expand architecture by default. When a consequential cause
-lies outside `workflow.design_depth`, identify the boundary and why it matters.
-If `workflow.ask_before_expansion` is true, stop that investigation branch and
-ask before creating broader specification or design. Continue independent
+lies outside the current task's agreed scope, identify the boundary and why it
+matters, stop that investigation branch and ask before creating broader
+specification or design. Continue independent
 in-depth work within the selected scope.
 
 ## Simplicity and drift review

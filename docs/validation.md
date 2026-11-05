@@ -52,10 +52,11 @@ npx @beligent/sdd-framework validate
 npx @beligent/sdd-framework doctor
 ```
 
-`validate` checks the unversioned default `.sdd/beligent/config.json`, duplicate JSON keys,
-safe paths, filesystem links, output collisions, record IDs/links/dependencies and
-structured criterion-check coverage, outcomes, revision and snapshot at closure.
-It is read-only. `doctor` reports config status, configured artifact paths, and
+`validate` checks the v2 `.sdd/beligent/config.json`, duplicate JSON keys, record
+identity, markers, references, dependency cycles and structured check coverage,
+outcomes, revision and snapshot at closure; `--since <ref>` adds final-state and
+revision rules and `--snapshot <TICKET-ID>` compares the recorded snapshot with the
+working tree. It is read-only. `doctor` reports config status, pre-v2 leftovers and
 whether core skills exist in known project locations. Missing skill copies are
 warnings because installations vary by agent; malformed or missing config is an
 error. These commands do not initialize, adopt, migrate, or modify a project.

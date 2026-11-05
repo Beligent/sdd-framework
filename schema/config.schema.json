@@ -1,50 +1,46 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:beligent:sdd:config",
-  "title": "Beligent SDD project configuration",
-  "description": "Default configuration for ordinary engineering and explicit ticket tracking.",
+  "$id": "urn:beligent:sdd:config:v2",
+  "title": "Beligent SDD project configuration (v2)",
+  "description": "Project settings at .sdd/beligent/config.json. Earlier schemas are rejected, never converted.",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "project",
-    "assistants",
-    "technologies",
-    "artifacts",
-    "tickets",
-    "workflow",
-    "testing",
-    "git",
-    "tracking"
+    "schema",
+    "hosts"
   ],
   "properties": {
+    "schema": {
+      "const": "beligent-sdd/config/v2"
+    },
+    "hosts": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "codex",
+          "claude-code",
+          "github-copilot",
+          "cursor",
+          "devin"
+        ]
+      }
+    },
     "project": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "name",
-        "type"
+        "name"
       ],
       "properties": {
         "name": {
           "type": "string",
           "minLength": 1
-        },
-        "type": {
-          "type": "string",
-          "minLength": 1
         }
       }
     },
-    "assistants": {
-      "type": "array",
-      "minItems": 1,
-      "uniqueItems": true,
-      "items": {
-        "type": "string",
-        "pattern": "^[a-z][a-z0-9-]*$"
-      }
-    },
-    "technologies": {
+    "stacks": {
       "type": "array",
       "uniqueItems": true,
       "items": {
@@ -57,236 +53,64 @@
         ]
       }
     },
-    "artifacts": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "specifications",
-        "conventions"
-      ],
-      "properties": {
-        "overview": {
-          "$ref": "#/$defs/path"
-        },
-        "requirements": {
-          "$ref": "#/$defs/path"
-        },
-        "specifications": {
-          "$ref": "#/$defs/path"
-        },
-        "decisions": {
-          "$ref": "#/$defs/path"
-        },
-        "plans": {
-          "$ref": "#/$defs/path"
-        },
-        "verification": {
-          "$ref": "#/$defs/path"
-        },
-        "approvals": {
-          "$ref": "#/$defs/path"
-        },
-        "conventions": {
-          "$ref": "#/$defs/path"
-        }
-      }
-    },
-    "tickets": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "provider",
-        "paths"
-      ],
-      "properties": {
-        "provider": {
-          "const": "markdown"
-        },
-        "paths": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "epics",
-            "tickets"
-          ],
-          "properties": {
-            "epics": {
-              "$ref": "#/$defs/path"
-            },
-            "tickets": {
-              "$ref": "#/$defs/path"
-            }
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "command"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "command": {
+            "type": "string",
+            "minLength": 1
+          },
+          "required": {
+            "type": "boolean"
           }
         }
       }
     },
-    "workflow": {
+    "tracking": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "rigor",
-        "design_depth",
-        "ask_before_expansion"
-      ],
       "properties": {
-        "rigor": {
-          "enum": [
-            "light",
-            "standard",
-            "rigorous"
-          ]
+        "required_for": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         },
-        "design_depth": {
+        "authorization": {
           "enum": [
-            "current-task",
-            "near-term",
-            "comprehensive"
-          ]
-        },
-        "ask_before_expansion": {
-          "type": "boolean"
-        }
-      }
-    },
-    "testing": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "lint",
-        "typecheck",
-        "unit",
-        "integration",
-        "e2e",
-        "accessibility",
-        "security",
-        "performance",
-        "tdd",
-        "manual"
-      ],
-      "properties": {
-        "lint": {
-          "enum": [
-            "always",
-            "when-relevant",
-            "never"
-          ]
-        },
-        "typecheck": {
-          "enum": [
-            "always",
-            "when-relevant",
-            "never"
-          ]
-        },
-        "unit": {
-          "enum": [
-            "always",
-            "when-relevant",
-            "never"
-          ]
-        },
-        "integration": {
-          "enum": [
-            "always",
-            "when-relevant",
-            "never"
-          ]
-        },
-        "e2e": {
-          "enum": [
-            "always",
-            "when-relevant",
-            "critical-user-journeys",
-            "never"
-          ]
-        },
-        "accessibility": {
-          "enum": [
-            "always",
-            "when-relevant",
-            "affected-ui",
-            "never"
-          ]
-        },
-        "security": {
-          "enum": [
-            "always",
-            "when-relevant",
-            "risk-based",
-            "never"
-          ]
-        },
-        "performance": {
-          "enum": [
-            "always",
-            "when-relevant",
-            "risk-based",
-            "never"
-          ]
-        },
-        "tdd": {
-          "enum": [
-            "always",
-            "when-useful",
-            "never"
-          ]
-        },
-        "manual": {
-          "enum": [
-            "always",
-            "when-relevant",
-            "never"
+            "request",
+            "recorded"
           ]
         }
       }
     },
-    "git": {
+    "delivery": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "strategy",
-        "conventional_commits",
-        "commit_after_task",
-        "agent_may_commit",
-        "push_after_commit",
-        "pull_request",
-        "review_before_commit",
-        "delivery_complete_at"
-      ],
       "properties": {
-        "strategy": {
-          "enum": [
-            "trunk",
-            "feature-branches"
-          ]
+        "commit": {
+          "$ref": "#/$defs/permission"
         },
-        "conventional_commits": {
-          "type": "boolean"
-        },
-        "commit_after_task": {
-          "type": "boolean"
-        },
-        "agent_may_commit": {
-          "type": "boolean"
-        },
-        "push_after_commit": {
-          "enum": [
-            "always",
-            "ask",
-            "never"
-          ]
+        "push": {
+          "$ref": "#/$defs/permission"
         },
         "pull_request": {
-          "enum": [
-            "never",
-            "feature-complete",
-            "always"
-          ]
+          "$ref": "#/$defs/permission"
         },
-        "review_before_commit": {
-          "type": "boolean"
-        },
-        "delivery_complete_at": {
+        "delivered_at": {
           "enum": [
             "commit",
             "push",
@@ -295,27 +119,15 @@
           ]
         }
       }
-    },
-    "tracking": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "mode"
-      ],
-      "properties": {
-        "mode": {
-          "enum": [
-            "opt-in",
-            "always"
-          ]
-        }
-      }
     }
   },
   "$defs": {
-    "path": {
-      "type": "string",
-      "minLength": 1
+    "permission": {
+      "enum": [
+        "allowed",
+        "ask",
+        "never"
+      ]
     }
   }
 }

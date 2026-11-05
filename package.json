@@ -49,7 +49,8 @@
     "CHANGELOG.md",
     "LICENSE",
     "dist/validation/records.js",
-    "docs/decisions/001-default-contract.md"
+    "dist/validation/git.js",
+    "docs/decisions/002-v2-contract.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",

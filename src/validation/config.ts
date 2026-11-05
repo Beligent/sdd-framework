@@ -1,58 +1,55 @@
-import { lstatSync, readFileSync, realpathSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import { Ajv2020 } from 'ajv/dist/2020.js';
 import schema from '../../schema/config.schema.json' with { type: 'json' };
 
 const ajv = new Ajv2020({ allErrors: true, strict: false });
 const validateSchema = ajv.compile(schema);
-const reservedFiles = new Set([
-  'AGENTS.md', 'CLAUDE.md', '.claude/CLAUDE.md', '.github/copilot-instructions.md',
-  '.sdd/beligent/config.json', '.sdd/beligent/setup-state.json', '.beligent/config.json', '.beligent/setup-state.json', 'skills-lock.json',
-]);
-const reservedDirectories = ['.git', '.agents/skills', '.claude/skills', '.github/skills', '.codex/skills', '.cursor/skills'];
+
+export const CONFIG_SCHEMA = 'beligent-sdd/config/v2';
+export const SDD_ROOT = '.sdd/beligent';
+export const CONFIG_PATH = `${SDD_ROOT}/config.json`;
+export const LEGACY_CONFIG_PATH = '.beligent/config.json';
+const noConversion = 'Recreate it from the v2 template; there is no automatic conversion. No files were changed.';
 
 export interface ConfigIssue { path?: string; message: string }
-type SharedProjectConfig = {
-  tracking: { mode: 'opt-in' | 'always' };
-  project: { name: string; type: string };
-  assistants: string[];
-  technologies: string[];
-  artifacts: Record<string, string>;
-  tickets: { provider: 'markdown'; paths: { epics: string; tickets: string } };
-};
-export type ProjectConfig = SharedProjectConfig & {
-  workflow: { rigor: 'light' | 'standard' | 'rigorous'; design_depth: 'current-task' | 'near-term' | 'comprehensive'; ask_before_expansion: boolean };
-  testing: {
-    lint: 'always' | 'when-relevant' | 'never'; typecheck: 'always' | 'when-relevant' | 'never';
-    unit: 'always' | 'when-relevant' | 'never'; integration: 'always' | 'when-relevant' | 'never';
-    e2e: 'always' | 'when-relevant' | 'critical-user-journeys' | 'never';
-    accessibility: 'always' | 'when-relevant' | 'affected-ui' | 'never';
-    security: 'always' | 'when-relevant' | 'risk-based' | 'never'; performance: 'always' | 'when-relevant' | 'risk-based' | 'never';
-    tdd: 'always' | 'when-useful' | 'never'; manual: 'always' | 'when-relevant' | 'never';
-  };
-  git: {
-    strategy: 'trunk' | 'feature-branches'; conventional_commits: boolean; commit_after_task: boolean; agent_may_commit: boolean;
-    push_after_commit: 'always' | 'ask' | 'never'; pull_request: 'never' | 'feature-complete' | 'always'; review_before_commit: boolean;
-    delivery_complete_at: 'commit' | 'push' | 'pull-request' | 'merged-pr';
-  };
+export type Host = 'codex' | 'claude-code' | 'github-copilot' | 'cursor' | 'devin';
+export type Permission = 'allowed' | 'ask' | 'never';
+export type ConfigCheck = { id: string; command: string; required?: boolean };
+export type ProjectConfig = {
+  schema: typeof CONFIG_SCHEMA;
+  hosts: Host[];
+  project?: { name: string };
+  stacks?: Array<'react-typescript' | 'nextjs' | 'nodejs' | 'python' | 'fastapi'>;
+  checks?: ConfigCheck[];
+  tracking?: { required_for?: string[]; authorization?: 'request' | 'recorded' };
+  delivery?: { commit?: Permission; push?: Permission; pull_request?: Permission; delivered_at?: 'commit' | 'push' | 'pull-request' | 'merged-pr' };
 };
 
-export const configDefaults: Pick<ProjectConfig, 'tracking' | 'workflow' | 'testing' | 'git'> = {
-  tracking: { mode: 'opt-in' },
-  workflow: { rigor: 'standard', design_depth: 'current-task', ask_before_expansion: true },
-  testing: {
-    lint: 'always', typecheck: 'always', unit: 'when-relevant', integration: 'when-relevant', e2e: 'critical-user-journeys',
-    accessibility: 'affected-ui', security: 'risk-based', performance: 'risk-based', tdd: 'when-useful', manual: 'when-relevant',
-  },
-  git: {
-    strategy: 'feature-branches', conventional_commits: true, commit_after_task: true, agent_may_commit: true,
-    push_after_commit: 'ask', pull_request: 'feature-complete', review_before_commit: true, delivery_complete_at: 'merged-pr',
-  },
+export const configDefaults = {
+  tracking: { required_for: [] as string[], authorization: 'request' as const },
+  delivery: { commit: 'ask' as const, push: 'ask' as const, pull_request: 'ask' as const, delivered_at: 'merged-pr' as const },
 };
 
-export function validateConfig(value: unknown, projectRoot?: string, allowTemplate = false): ConfigIssue[] {
-  if (!isRecord(value)) return [{ message: 'configuration must be an object' }];
-  if ('schema_version' in value) return [{ path: '/schema_version', message: 'Legacy versioned configuration is unsupported. Propose a reviewed conversion to the default schema; no files were changed.' }];
+export function authorizationMode(config: ProjectConfig): 'request' | 'recorded' {
+  return config.tracking?.authorization ?? configDefaults.tracking.authorization;
+}
+
+export function deliveredAt(config: ProjectConfig): NonNullable<NonNullable<ProjectConfig['delivery']>['delivered_at']> {
+  return config.delivery?.delivered_at ?? configDefaults.delivery.delivered_at;
+}
+
+export function validateConfig(value: unknown, allowTemplate = false): ConfigIssue[] {
+  if (!isRecord(value)) return [{ message: 'configuration must be a JSON object' }];
+  if ('schema_version' in value) {
+    return [{ path: '/schema_version', message: `This configuration uses an earlier Beligent schema (schema_version ${JSON.stringify(value.schema_version)}). v2 requires "schema": "${CONFIG_SCHEMA}". ${noConversion}` }];
+  }
+  if (!('schema' in value)) {
+    return [{ path: '/schema', message: `This configuration has no "schema" marker, so it predates v2. v2 requires "schema": "${CONFIG_SCHEMA}". ${noConversion}` }];
+  }
+  if (value.schema !== CONFIG_SCHEMA) {
+    return [{ path: '/schema', message: `Unsupported schema ${JSON.stringify(value.schema)}; this tool supports "${CONFIG_SCHEMA}". No files were changed.` }];
+  }
   if (!validateSchema(value)) {
     return (validateSchema.errors ?? []).map((error) => ({
       ...(error.instancePath ? { path: error.instancePath } : {}),
@@ -61,82 +58,49 @@ export function validateConfig(value: unknown, projectRoot?: string, allowTempla
   }
   const config = value as ProjectConfig;
   const issues: ConfigIssue[] = [];
-  if (!config.project.name.trim() || !config.project.type.trim()) {
-    issues.push({ path: '/project', message: 'project.name and project.type must not be blank' });
-  }
-  if (!allowTemplate && [config.project.name, config.project.type].some((value) => value.includes('{{') || value.includes('}}'))) {
-    issues.push({ path: '/project', message: 'contains an unrendered project placeholder' });
-  }
-  const paths: Array<[string, string]> = [
-    ...Object.entries(config.artifacts).map(([name, value]) => [`artifacts.${name}`, value] as [string, string]),
-    ['tickets.paths.epics', config.tickets.paths.epics],
-    ['tickets.paths.tickets', config.tickets.paths.tickets],
-  ];
-  for (const [label, value] of paths) issues.push(...pathIssues(label, value, projectRoot));
-  checkPathRelationships(config, issues);
-  if (projectRoot) {
-    for (const [label, value] of paths) {
-      const target = path.resolve(projectRoot, value);
-      try {
-        const info = lstatSync(target);
-        if ((label === 'artifacts.overview') !== info.isFile()) {
-          issues.push({ path: label, message: `expected a ${label === 'artifacts.overview' ? 'file' : 'directory'} at '${value}'` });
-        }
-      } catch { /* Nonexistent destinations are valid before setup. */ }
-    }
-  }
+  if (config.project && !config.project.name.trim()) issues.push({ path: '/project/name', message: 'must not be blank' });
+  if (!allowTemplate && config.project && /\{\{|\}\}/.test(config.project.name)) issues.push({ path: '/project/name', message: 'contains an unrendered placeholder' });
+  const ids = (config.checks ?? []).map((check) => check.id);
+  for (const id of new Set(ids.filter((id, index) => ids.indexOf(id) !== index))) issues.push({ path: '/checks', message: `duplicate check id '${id}'` });
   return issues;
+}
+
+/** Locates the v2 configuration, or explains why the project has none. */
+export function locateConfig(projectRoot: string): { path: string } | { issue: string } {
+  const configPath = path.join(projectRoot, CONFIG_PATH);
+  if (existsSync(configPath)) return { path: configPath };
+  if (existsSync(path.join(projectRoot, LEGACY_CONFIG_PATH))) {
+    return { issue: `Pre-v2 Beligent setup found at .beligent/. v2 reads only ${CONFIG_PATH} and never converts or deletes old files. Run sdd-init for a v2 setup and copy any settings you want to keep by hand.` };
+  }
+  return { issue: `${CONFIG_PATH} is missing. Run sdd-init to configure the project.` };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function pathIssues(label: string, value: string, projectRoot?: string): ConfigIssue[] {
-  const fail = (message: string): ConfigIssue[] => [{ path: label, message }];
-  if (!value || value.includes('\0')) return fail('must be a nonempty project-relative path');
+/** Checks a project-relative POSIX path, and with a root, that it stays inside the project without links. */
+export function pathIssue(value: unknown, projectRoot?: string): string | undefined {
+  if (typeof value !== 'string' || !value || value.includes('\0')) return 'must be a nonempty project-relative path';
   const parts = value.split('/');
-  if (path.posix.isAbsolute(value) || path.win32.isAbsolute(value) || path.win32.parse(value).root || value.includes('\\') || parts.some((part) => ['', '.', '..'].includes(part)) || value.includes('{{') || value.includes('}}')) {
-    return fail('must be a safe project-relative POSIX path without traversal');
+  if (path.posix.isAbsolute(value) || path.win32.isAbsolute(value) || path.win32.parse(value).root || value.includes('\\') || parts.some((part) => ['', '.', '..'].includes(part))) {
+    return 'must be a safe project-relative POSIX path without traversal';
   }
-  if (reservedFiles.has(value) || reservedDirectories.some((directory) => value === directory || value.startsWith(`${directory}/`))) {
-    return fail('must not use an instruction, configuration or installed-resource path');
-  }
-  if (projectRoot) {
-    let current = path.resolve(projectRoot);
-    for (const part of parts) {
-      current = path.join(current, part);
-      try {
-        const item = lstatSync(current);
-        if (item.isSymbolicLink()) return fail('must not contain a symlink destination or ancestor');
-        if (current === path.resolve(projectRoot, value) && item.isFile() && item.nlink > 1) return fail('must not be a hard-linked output file');
-      } catch { break; }
-    }
-    let absoluteRoot: string;
-    try { absoluteRoot = realpathSync(projectRoot); } catch { absoluteRoot = path.resolve(projectRoot); }
-    const target = path.resolve(absoluteRoot, value);
-    if (target !== absoluteRoot && !target.startsWith(`${absoluteRoot}${path.sep}`)) return fail('resolves outside the project');
+  if (!projectRoot) return undefined;
+  let current = path.resolve(projectRoot);
+  for (const part of parts) {
+    current = path.join(current, part);
     try {
-      const resolvedTarget = realpathSync(target);
-      if (resolvedTarget !== absoluteRoot && !resolvedTarget.startsWith(`${absoluteRoot}${path.sep}`)) return fail('resolves outside the project');
-    } catch { /* An output may not exist yet. */ }
+      const item = lstatSync(current);
+      if (item.isSymbolicLink()) return 'must not contain a symlink destination or ancestor';
+      if (current === path.resolve(projectRoot, value) && item.isFile() && item.nlink > 1) return 'must not be a hard-linked file';
+    } catch { break; }
   }
-  return [];
-}
-
-function checkPathRelationships(config: ProjectConfig, issues: ConfigIssue[]): void {
-  const paths: Array<[string, string]> = [
-    ...Object.entries(config.artifacts).map(([name, value]) => [`artifacts.${name}`, value] as [string, string]),
-    ['tickets.paths.epics', config.tickets.paths.epics],
-    ['tickets.paths.tickets', config.tickets.paths.tickets],
-  ];
-  const overview = config.artifacts.overview;
-  for (const [name, value] of paths) {
-    if (name !== 'artifacts.overview' && (value === overview || value.startsWith(`${overview}/`))) issues.push({ path: name, message: 'overlaps overview file' });
-  }
-  const { epics, tickets } = config.tickets.paths;
-  if (epics === tickets || epics.startsWith(`${tickets}/`) || tickets.startsWith(`${epics}/`)) issues.push({ path: '/tickets/paths', message: 'epic and ticket directories must not overlap' });
-  if (overview && (overview.startsWith(`${epics}/`) || overview.startsWith(`${tickets}/`))) issues.push({ path: '/artifacts/overview', message: 'must not live in authoritative epic or ticket directories' });
+  let absoluteRoot: string;
+  try { absoluteRoot = realpathSync(projectRoot); } catch { absoluteRoot = path.resolve(projectRoot); }
+  const target = path.resolve(absoluteRoot, value);
+  if (target !== absoluteRoot && !target.startsWith(`${absoluteRoot}${path.sep}`)) return 'resolves outside the project';
+  return undefined;
 }
 
 export function parseConfig(text: string): unknown {

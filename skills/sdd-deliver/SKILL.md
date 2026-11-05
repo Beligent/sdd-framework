@@ -24,9 +24,9 @@ Git direction and repository policy instead of invented defaults.
    without separate explicit authorization. Observe the configured completion
    point; an open PR never establishes a merge.
 5. Report commit, remote branch, PR reference, verification and limits. If tracked,
-   update existing [provider records](references/ticket-management/contract.md)
-   through the [Markdown mapping](references/ticket-management/markdown.md) with
-   conflict checks. Never create a ticket as a side effect of delivery.
+   update only the ticket's `delivery` field as described in the
+   [record contract](references/records.md), re-reading the file before writing.
+   Never create a ticket as a side effect of delivery.
 
 `delivered` records an observed Git milestone. Ticket done already means agreed
 work and required checks are complete; delivery never redefines or gates it.

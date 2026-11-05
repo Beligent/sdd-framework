@@ -17,7 +17,7 @@ const skills = ['sdd-init', 'sdd-define', 'sdd-implement', 'sdd-audit', 'sdd-del
 for (const skill of skills) {
   if (!files.includes(`skills/${skill}/SKILL.md`)) problems.push(`Missing published skill entrypoint: ${skill}`);
 }
-const runtimeFiles = ['dist/cli/index.js', 'dist/usage/usage.js', 'dist/validation/config.js', 'dist/validation/records.js'];
+const runtimeFiles = ['dist/cli/index.js', 'dist/usage/usage.js', 'dist/validation/config.js', 'dist/validation/records.js', 'dist/validation/git.js'];
 for (const required of ['README.md', 'LICENSE', 'CHANGELOG.md', 'package.json', ...runtimeFiles, 'schema/config.schema.json']) {
   if (!files.includes(required)) problems.push(`Missing required package file: ${required}`);
 }

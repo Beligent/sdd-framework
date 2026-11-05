@@ -9,18 +9,16 @@ Use one main assistant; specialists are optional bounded help using the same rul
 
 Select only useful phases: enough definition, useful planning, implementation,
 criterion verification. `sdd-implement` composes this path; it need not be preceded
-by `sdd-define` or followed by `sdd-audit`. Reuse existing definitions/plans and
-skip satisfied steps. Ordinary scope is plan-task; plan-epic/plan-project require
-explicit intent. Ask before consequential design expansion and defer unrelated scope.
+by `sdd-define` or followed by `sdd-audit`. Reuse existing definitions and skip
+satisfied steps. Ask before consequential design expansion and defer unrelated scope.
 
 During implementation add/update meaningful tests where practical, reuse adequate
-coverage and run relevant checks. Apply always/when-relevant and specialized risk
-preferences literally. Record every required check with criterion references,
-command/procedure, actual outcome, ticket revision and implementation snapshot.
-Failing, blocked, unverified or stale required checks leave tracked work open.
-When agreed behavior and current required checks pass, record done. Delivery is
-separate. An optional audit can inspect done work without reopening it automatically.
+coverage and run relevant checks. Record every required check with its criteria,
+command or procedure, actual outcome, ticket revision and implementation snapshot.
+Failing, blocked, unrun or stale required checks leave tracked work open. When
+agreed behavior and current required checks pass, record done. Delivery is separate.
 
-Missed original criteria warrant a reopen recommendation; new scope is separate.
-An explicitly authorized reopen preserves evidence/history and requires fresh
-checks. Never rewrite criteria to disguise a failure or infer acceptance from silence.
+Done and cancelled tickets are final. An optional audit can inspect done work and
+report findings; a later fix is ordinary work, or a new ticket when tracking is
+explicitly requested. Never rewrite criteria to disguise a failure or infer
+acceptance from silence.

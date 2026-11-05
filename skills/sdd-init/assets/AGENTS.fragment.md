@@ -23,7 +23,7 @@ Use sdd-init for reviewed setup/adoption, sdd-define for definition/planning,
 sdd-implement for implementation and verification, sdd-audit for read-only review,
 diagnosis/status, and sdd-deliver for authorized Git actions. A ticket is done when
 agreed work and its required checks pass; failed/blocked/unrun checks leave it open.
-Audit is optional before/after closure. Recommend reopening for missed original
-criteria, track new scope separately, and obtain authorization before audit writes.
-Git delivery state and permissions are separate from ticket completion.
+Done and cancelled tickets are final. Audit is optional before/after closure and
+reports findings without changing records; a later fix is ordinary work, or a new
+ticket when tracking is requested. Git delivery is separate from ticket completion.
 <!-- beligent-sdd:end -->

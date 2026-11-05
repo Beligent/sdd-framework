@@ -69,7 +69,6 @@ Check agreed behavior and current required checks. Ticket completion does not
 require a universal human acceptance decision or Git milestone. Record failures,
 unverified checks and stale evidence honestly; they keep work open.
 
-Audits are read-only by default even for closed tickets. Recommend reopening for
-missed original criteria. Only explicit update/reopen authorization permits a
-conflict-safe revision with preserved history. Newly requested scope belongs to
-separate work. Delivery remains independently authorized.
+Audits are read-only by default even for closed tickets. Done tickets are final:
+report a missed criterion as a finding; its fix is ordinary work, or a new ticket
+when tracking is explicitly requested. Delivery remains independently authorized.

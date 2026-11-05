@@ -14,14 +14,13 @@ For example:
 The first pass is read-only. It inspects applicable instructions, application
 architecture, dependency/test manifests, existing specifications and tickets,
 documentation, and assistant discovery. It proposes reuse of current artifacts
-and conventions rather than moving or duplicating them. The MVP ticket backend
-is Markdown; an existing issue tracker needs an explicit authoritative-provider
-decision before new tickets are created. No remote tracker integration is
-implied.
+and conventions rather than moving or duplicating them. Tracked records are
+Markdown files under `.sdd/beligent/`; an existing issue tracker stays separate
+and is never mirrored or synchronized.
 
 The proposal includes:
 
-- The repository root, selected technologies/workflow policy, and complete configuration.
+- The repository root, selected hosts, stacks and project checks, and the complete configuration.
 - Existing artifact locations and instructions to preserve.
 - Every proposed addition or managed-section diff, with current hashes/absence.
 - Conflicts, uncertain instruction precedence, and unsupported settings/schemas.
@@ -67,6 +66,6 @@ Exercise an installed workflow against an existing artifact in a live assistant
 session when available; otherwise mark that check pending. A fixture demonstration
 does not establish every assistant surface's behavior.
 
-Adoption does not retroactively approve product scope or mark existing tickets
-ready. Map old approval evidence when it exists, retain unanswered questions, and
-use the selected workflow and actual project authorization for subsequent decisions.
+Adoption does not retroactively approve product scope or create tickets for
+existing work. Retain unanswered questions and use actual project authorization
+for subsequent decisions.

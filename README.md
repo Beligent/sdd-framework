@@ -65,7 +65,7 @@ Repeat setup should leave identical output unchanged.
 | Skill | Responsibility | Example request |
 | --- | --- | --- |
 | `sdd-init` | New-project setup or adoption of an existing repository | `Use sdd-init to review setup for this project.` |
-| `sdd-define` | Requirements, behavior, epics, opt-in tickets and technical planning | `Use sdd-define ticket for this tracked change.` |
+| `sdd-define` | Shared specs, optional epics, explicitly tracked tickets and planning | `Use sdd-define ticket for this tracked change.` |
 | `sdd-implement` | One bounded implementation with useful tests and verification | `Use sdd-implement to fix the retry behavior.` |
 | `sdd-audit` | Code review, integration audit or independent root-cause diagnosis | `Use sdd-audit to diagnose this failing test.` |
 | `sdd-deliver` | Authorized scoped commit, push and PR delivery after verification | `Use sdd-deliver to commit this verified change.` |
@@ -75,8 +75,8 @@ In Claude Code, use `/sdd-init`. Copilot's documented chat/CLI skill syntax uses
 `/sdd-init`; verify discovery in the selected surface. In Cursor, invoke the
 discovered skill by name in chat. Devin invocation remains to be validated.
 These are agent invocations, not shell commands. `sdd-define` route selectors
-such as `requirements`, `specification`, `ticket`/`tickets`, `plan-task`, `plan-epic` and
-`plan-project` are prompt selectors, not additional CLI or slash commands.
+such as `ticket`, `spec` and `epic` are prompt selectors, not additional CLI or
+slash commands.
 
 ## Ordinary work and opt-in tracking
 
@@ -87,21 +87,21 @@ implementation, inspects the final diff and reports actual outcomes and limits.
 Missing configuration does not block ordinary authorized code work. Confirm
 actual instruction loading in the selected host.
 
-Tracking defaults to `tracking.mode: opt-in`. Ordinary code, review and delivery
-requests keep definition, plans and evidence in chat; they do not create tickets,
-SDD reports, approval artifacts or follow-up tasks. Ask to track the change, name
-an existing task or explicitly request durable SDD artifacts when useful. An
-approved `tracking.mode: always` project policy is also available.
+Tracking starts only on explicit intent. Ordinary code, review and delivery
+requests keep definition, plans and evidence in chat; they do not create tickets
+or follow-up tasks. Ask to track the change or name an existing ticket to
+implement. Config `tracking.required_for` lists kinds of change the assistant
+flags before editing.
 
 Tracked work becomes done when agreed work and every required check pass at the
-current revision/implementation snapshot. Failed, blocked, unrun or stale required
-checks keep it open. Audit is optional and read-only before/after closure. A missed
-original criterion warrants a reopen recommendation; new scope is separate work.
-Git delivery has its own state and permissions and does not gate ticket done.
+current revision and implementation snapshot. Failed, blocked, unrun or stale
+required checks keep it open. Done is final: audit is optional and read-only, and
+a later fix is ordinary work or a new ticket. Git delivery has its own state and
+permissions and does not gate ticket done.
 
 The [runnable fixture](examples/workflow-fixture/README.md) demonstrates a direct
-regression fix, standalone ticket, epic/shared spec, failed required check, resume
-state and post-close audit. Run `node examples/workflow-fixture/run-scenarios.mjs`.
+regression fix, standalone ticket, epic/shared spec, failed required check and
+post-close audit. Run `node examples/workflow-fixture/run-scenarios.mjs`.
 
 ## Folder structure
 
@@ -110,12 +110,12 @@ Framework source repository:
 ```text
 skills/
   sdd-init/           # setup/adoption, configuration and instruction templates
-  sdd-define/         # definition/planning, governance and ticket-provider contract
+  sdd-define/         # definition/planning, governance, record contract and templates
   sdd-implement/      # engineering, testing and selected technology guidance
-  sdd-audit/          # review, diagnosis and verification-report template
+  sdd-audit/          # review and diagnosis
   sdd-deliver/        # scoped Git delivery policy
 schema/
-  config.schema.json # the only configuration schema; no schema version field
+  config.schema.json # the only configuration schema (beligent-sdd/config/v2)
 src/
   cli/               # optional sdd diagnostic and usage commands
   validation/        # config, record, framework and release checks
@@ -142,8 +142,11 @@ A configured consumer project may contain:
 .agents/skills/sdd-*/  # example Codex/Copilot copy location; host paths vary
 .claude/skills/sdd-*/  # example Claude copy location when selected
 .sdd/beligent/
-  config.json         # project-owned default configuration
+  config.json         # project-owned v2 configuration
   guidance/           # engineering/testing/review and selected stack rules
+  tickets/            # on demand, for explicitly tracked work
+  epics/              # on demand, optional grouping
+  specs/              # on demand, optional shared behavior
   setup-state.json    # integration ownership/hashes; separate state format
   usage.jsonl         # optional, only after an explicit usage import
 AGENTS.md             # shared engineering guidance and project instructions
@@ -153,26 +156,9 @@ CLAUDE.md             # optional Claude import adapter
 skills-lock.json      # provenance maintained by the external installer
 ```
 
-Tracked artifacts use configured paths, conventionally:
-
-```text
-.sdd/beligent/
-  overview.md
-  guidance/
-  requirements/
-  specs/              # optional shared behavior contracts
-  architecture/decisions/
-  epics/
-  tickets/
-  plans/
-  verification/
-  approvals/
-```
-
-These are destinations, not a mandatory scaffold. Adoption can reuse existing
-locations. Ticket directories are created only for selected tracking; ordinary
-code work does not create this artifact tree. Setup state and usage have their
-own format markers, independent of the unversioned configuration.
+Record directories are fixed and created only with their first record; ordinary
+code work creates none of them. See the [record contract](skills/sdd-define/references/records.md).
+Setup state and usage have their own format markers, independent of the configuration.
 
 ## Optional CLI commands
 
@@ -182,8 +168,9 @@ The skill installer takes a Git/local source, not the npm package name.
 
 | CLI command | Purpose / writes |
 | --- | --- |
-| `validate [--config <path>]` | Validate config, safe paths, record links and closure evidence; read-only |
-| `doctor [project-path]` | Inspect config, legacy installs and duplicate/missing skills; read-only |
+| `validate [project-path] [--since <ref>] [--snapshot <TICKET-ID>]` | Validate config, records and closure evidence; `--since` enforces final states and revisions against a Git revision; read-only |
+| `snapshot [project-path]` | Print the implementation snapshot to record before closing a ticket; read-only |
+| `doctor [project-path]` | Inspect config, pre-v2 leftovers and duplicate/missing skills; read-only |
 | `version` | Print the version from `package.json` |
 | `usage report [--json]` | Summarize existing local usage; read-only |
 | `usage footer --agent <codex\|claude> --skill <name> --file <path>` | Format exact usage from host output; no store write |
@@ -204,7 +191,7 @@ To use this checkout before publication, build it and run the local CLI:
 npm ci
 npm run build
 node dist/cli/index.js version
-node dist/cli/index.js validate --config /path/to/target-project/.sdd/beligent/config.json
+node dist/cli/index.js validate /path/to/target-project
 node dist/cli/index.js doctor /path/to/target-project
 ```
 

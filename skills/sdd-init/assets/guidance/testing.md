@@ -54,13 +54,12 @@ that mirrors the implementation.
 For each stable criterion reference such as `SPEC-001/AC-001`, record the test or
 review identifier, command or procedure, inspected revision, observed result and
 link to available evidence. A concise terminal outcome may be enough for a
-small local test; use a report artifact for longer results. Sanitize logs before
-storing them. Use `pass`, `fail` or `unverified`; a test being written is not a
-test passing. Note a criterion as not applicable only with its reason and the
-applicable decision.
+small local test. Sanitize logs before storing them. Use `pass`, `fail`,
+`blocked` or `not-run`; a test being written is not a test passing. Mark an
+optional check not applicable only with its reason.
 
 Close tracked work when agreed criteria and every required check pass at the
 current ticket revision and implementation snapshot. Failing, blocked, unrun or
-stale required checks keep work open. Store structured criterion/check results;
-narrative prose alone is insufficient. Delivery and any actual project-specific
-acceptance decision are separate from a universal completion gate.
+stale required checks keep work open. Store structured check results as described
+in the record contract; narrative prose alone is insufficient. Delivery is
+separate from completion.

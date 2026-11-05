@@ -12,8 +12,8 @@ mode generates application code or installs dependencies.
 1. Read [setup](references/setup.md) and [governance](references/shared/governance.md).
 2. Inventory configuration, installed skills, instructions, architecture, tests,
    specifications and backlog. Preserve existing guidance and reuse suitable paths.
-   Detect legacy .beligent installations and old skill copies. Propose a clean-break
-   conversion without silent overwrite or deletion.
+   Detect pre-v2 installations and old skill copies and report them; there is no
+   conversion, and nothing is overwritten or deleted silently.
 3. Present the concrete configuration and exact instruction diffs in chat.
    For adoption use [the adoption plan](assets/adoption-plan.md). Include conflicts,
    preservation checks, rollback, assistant discovery and outstanding host tests.

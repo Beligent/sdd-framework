@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Adopt the v2 contract ([decision 002](docs/decisions/002-v2-contract.md)).
+  Configuration declares `"schema": "beligent-sdd/config/v2"` and keeps only
+  `hosts`, `project.name`, `stacks`, `checks`, `tracking` and `delivery`; earlier
+  configurations and unmarked records are rejected with actionable messages.
+- Replace the ticket-provider contract with `references/records.md`: fixed record
+  directories, `schema` markers on tickets, epics and specs, local criteria plus
+  `spec_criteria`, and structured checks bound to a revision and `git-tree:` snapshot.
+- Done and cancelled are final; reopening is removed. Specs have no revision.
+- Add `sdd snapshot`, `sdd validate --since <ref>` (final states, history and
+  revision rules) and `sdd validate --snapshot <TICKET-ID>`; `validate` now takes
+  a project path instead of `--config`.
+- Remove requirements, ADR, plan, approval, compact-task and verification-report
+  templates, change control and the requirements workflow.
 - Remove the artifact-only `team-task-tracker` example, the historical MVP plan,
   the six-skill validation report and upgrade/conversion guidance. No backward
   compatibility is provided.

@@ -1,29 +1,17 @@
 # Epics workflow
 
-Invoke directly with an outcome/delivery grouping and available context. Existing
-requirements/specifications improve precision, but detailed architecture is not
-required to draft preliminary epics or candidate tickets.
+Epics are optional. Use one only to group tickets that deliver one outcome.
+Follow the [record contract](../records.md) and the [epic template](../../assets/epic.md).
 
-Load the [provider contract](../ticket-management/contract.md) and configured
-provider. Use semantic operations and normalized records throughout.
+1. Read existing epics and tickets for the outcome before creating a grouping;
+   prefer refining an existing epic to duplicating its scope.
+2. Describe one coherent outcome and its exclusions. Behavior that several
+   tickets share belongs in a spec, not in the epic.
+3. Identify candidate ticket slices with independently verifiable results.
+   Create tickets only when backlog creation was requested. Membership is the
+   ticket's `epic` field; `depends_on` means a prerequisite, not membership.
+4. Mark the epic done only when its member tickets are done or cancelled. A
+   done or cancelled epic is final.
 
-1. Read/list existing records relevant to the outcome before creating a grouping.
-   Prefer refining an existing epic to duplicating the same scope.
-2. Define one coherent outcome, exclusions, requirement/specification references
-   where available, and criteria sufficient to assess the epic outcome. Use
-   `kind: epic` and an `EPIC-001` style stable ID.
-3. Create or update through the provider. Mark unresolved technical questions and
-   missing references in scope/details; use `readiness: preliminary` while they
-   block planning readiness. Keep status and approval references separate.
-4. Identify candidate ticket slices with independently verifiable results. Create
-   tickets only when the user requested backlog creation or that work is within
-   the current authorized scope. Refer to child ticket IDs in epic scope/details;
-   use `dependencies` only for actual prerequisites, not parent/child membership.
-5. After technical planning, refine delivery boundaries, dependencies and criteria
-   through provider updates. Apply [change control](../change-control.md) to any
-   approved scope affected by these changes.
-
-Output: normalized epic records and candidate or created ticket references.
-Validate coherent scope, clear membership, no dependency cycles, resolvable
-available references and explicit gaps. An epic does not require an architecture
-document merely to exist; `ready` and human approval are separate decisions.
+Run `sdd validate` after writing. Report the epic, its candidate or created
+tickets and open questions.

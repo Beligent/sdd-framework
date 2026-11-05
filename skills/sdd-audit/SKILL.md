@@ -16,7 +16,7 @@ For implementation review, identify the exact diff/revision, required behavior,
 criteria, authorization and existing evidence. Review correctness, scope drift,
 security, simplicity, compatibility, documentation and maintainability. Reuse
 trustworthy checks covering that revision and run meaningful missing checks.
-Record pass/fail/unverified per criterion and distinguish automated evidence,
+Record pass/fail/blocked/not-run per criterion and distinguish automated evidence,
 manual observations, pre-existing failures and unavailable environments.
 
 For diagnosis, separate observations from hypotheses, reproduce the failure when
@@ -36,12 +36,9 @@ for review/status does not authorize implementation or record mutation. Invoke
 `verify` for criterion verification, `diagnose` for causes, `review` for a diff,
 or `status` to summarize existing facts; selectors are prompt intents.
 
-If a closed ticket missed an original criterion, recommend reopening the same
-ticket. Do not reopen it automatically. On explicit update/reopen authorization,
-use the [contract](references/ticket-management/contract.md) and
-[provider](references/ticket-management/markdown.md), preserve prior scope/evidence
-in history, increment revision, and leave it todo/blocked for fresh verification.
-Newly requested scope is separate work, tracked only on explicit intent. Write a
-[report](assets/verification-report.md) only when explicitly authorized. Do not
-silently fix code, change config, create tracking, perform Git delivery, or invent
+Read tracked records through the [record contract](references/records.md). Done
+and cancelled tickets are final: if a done ticket misses a criterion, report the
+finding and leave the record unchanged. The fix is an ordinary request, or a new
+ticket only when the developer explicitly asks for tracking. Do not silently fix
+code, change config or records, create tracking, perform Git delivery, or invent
 check results. Audit can run before or after done and is not a universal gate.

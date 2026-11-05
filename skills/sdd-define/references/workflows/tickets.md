@@ -1,41 +1,25 @@
 # Tickets workflow
 
-Invoke directly with an operation and relevant context: create, read, list/filter,
-update/refine/prioritize, link or transition. Existing context is enough to draft
-a preliminary ticket; completed specifications, an epic and detailed architecture
-are not prerequisites for drafting.
+Invoke with an operation and context: create, read, list, refine, link, block or
+cancel. Follow the [record contract](../records.md) and the
+[ticket template](../../assets/ticket.md). Existing context is enough to draft a
+ticket; a spec, an epic or detailed architecture is not a prerequisite.
 
-Load the [provider contract](../ticket-management/contract.md) and configured
-provider. All storage mechanics belong to that provider, including ID lookup,
-conflict detection and serialization.
+1. For a query, read the records and report actual matches or missing IDs. A
+   query, status request or mention never creates or changes a record.
+2. For creation, check existing tickets for duplicate scope, then write one
+   deliverable with an objective, scope, exclusions and testable `### AC-001`
+   criteria. Reference shared behavior through `spec_criteria` instead of
+   copying it. Use the next unused `TICKET-NNN` and status `todo`.
+3. For refinement of an open ticket, re-read it, then update scope, criteria,
+   dependencies or notes. A criteria change increments `revision` and appends a
+   `revised` history entry preserving the previous criteria and evidence. Do not
+   silently edit shared behavior to fit a proposed solution.
+4. For links, verify that referenced tickets, epics and specs exist and reject
+   self-links and cycles. `blocked` needs a `blocked_reason`; `cancelled` needs a
+   `cancelled_reason` and the developer's explicit decision.
+5. Done and cancelled tickets are final. New scope after closure is a new ticket.
 
-1. For a query, read/list/filter through the provider and report actual matches,
-   missing IDs or unsupported filters. Do not create artifacts as a side effect.
-2. For creation, check existing records for duplicate scope, then form one useful
-   deliverable with criteria, explicit exclusions and unresolved questions. For
-   light/standard current-task work, use the [compact task
-   template](../../assets/compact-task.md) when it satisfies the stop rule;
-   choose the expanded normalized record when existing traceability needs it.
-   Use `TICKET-001` style IDs, `todo`, and `preliminary` while a blocker remains.
-3. For refinement, read the current record and its content revision. Compare
-   requirements/specifications and any technical plan; update scope, criterion
-   references, dependencies, priority and test approach where justified. Record
-   assumptions or changes in scope/details. Do not silently edit canonical
-   behavior to fit a proposed solution.
-4. For dependency linking, verify referenced records and reject self-links/cycles.
-   For status transitions, satisfy contract preconditions. Light and
-   standard compact tasks become ready when their objective, behavior and
-   testable criteria are clear, blockers are resolved, and consequential risks
-   are resolved, accepted, or escalated. Rigor changes review depth, not whether a ticket can stand alone. Readiness never substitutes for implementation
-   approval.
-5. Apply changes against the expected content revision and read back the result.
-   Stop and report conflicts, unsupported operations or broken references.
-   Apply [change control](../change-control.md) to material scope/plan changes.
-
-Output: query results or updated normalized records with IDs, locators and content
-revisions. Report unresolved readiness/approval blockers separately from status.
-Validate acceptance criteria can be checked, missing references are explicit for
-preliminary records, and ready records meet their applicable readiness rule. If
-`ask_before_expansion` is true, ask before drafting deeper design for a concern
-outside selected depth. Mark done only when all agreed criteria and required checks pass at the current
-revision/snapshot. Delivery and a universal human acceptance gate are not required.
+Run `sdd validate` after writing. Report unresolved questions separately from
+status. A ticket never authorizes implementation by itself. If
+`tracking.required_for` matches the requested change, say so before any edit.

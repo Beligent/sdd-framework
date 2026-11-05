@@ -11,13 +11,13 @@ preflights destinations; it never applies consumer changes.
 Resolve the consumer root and applicable instructions. Inventory existing code,
 tests, conventions, instructions, skill roots, `.sdd/beligent/config.json` and
 setup-state. Also inspect legacy `.beligent/`, `docs/sdd/`, old skill names and
-versioned config. Show clean-break options and exact diffs; never silently move,
-rewrite or delete old files. Reuse valid project-owned content where appropriate.
-Old versioned config needs separately reviewed conversion before dependent writes.
+versioned or unversioned pre-v2 config. Report them with clean-break options;
+never silently move, rewrite, convert or delete old files.
 
-Select hosts and only relevant technology modules. Default workflow to standard,
-current-task, ask before consequential expansion, risk-proportionate checks and
-opt-in tracking. Delivery has its own policy and does not gate ticket done.
+Select hosts and only relevant stack modules. Propose the project's real test,
+lint and typecheck commands as config `checks`, marking those every tracked
+closure needs as `required`. Default tracking authorization to `request` and
+every delivery permission to `ask`. Delivery does not gate ticket done.
 Show exact config, guidance files, skill copy locations, instruction sections,
 ownership baselines, preservation checks and rollback. Use
 `assets/adoption-plan.md` for existing projects. Present the plan in chat before
@@ -54,9 +54,10 @@ and evidence expectations, and the same shared guidance. One main agent is defau
 
 Before the first write:
 
-- Parse strict JSON, reject duplicate/unknown keys, validate the single unversioned
-  config against `assets/config.json`, and resolve all paths from consumer root.
-  Keep specifications and ticket/epic destinations lazy. No frameworks.json.
+- Parse strict JSON, reject duplicate/unknown keys and validate the config against
+  the v2 shape in `assets/config.json` (`"schema": "beligent-sdd/config/v2"`).
+  Record directories under `.sdd/beligent/` are created only with their first
+  record. No frameworks.json.
 - Inventory bytes/hashes or absence for every destination. Only the approved host
   copies, selected shared guidance, config, managed sections and ownership state
   can change. Configuration and instruction refresh are distinct reviewed scopes.
@@ -182,10 +183,8 @@ implementation, or completion and does not publish or modify application code.
 - **Skill update:** review source/revision and replace installed skills through
   the chosen installer. Only skill content and installer provenance change.
   Project config, instruction files, setup state, and artifacts remain unchanged.
-- **Config conversion:** inspect the default contract before affected writes; propose
-  an explicit old/new JSON diff, preservation rules, verification, and rollback.
-  Apply after the real human decision. Only the unversioned default schema ships;
-  never reinterpret legacy versioned settings or remove fields silently.
+- **Earlier configurations:** there is no conversion. Report them and set up v2
+  afresh; never reinterpret old settings or remove old files silently.
 - **Instruction refresh:** compare the current managed section against its
   recorded baseline before proposing a new section. Matching bytes permit the
   reviewed replacement; local edits require a three-way merge proposal using
@@ -194,5 +193,5 @@ implementation, or completion and does not publish or modify application code.
   than reconstructing it from its hash. Update only approved section hashes and
   the integration revision. Preserve user text, config, and artifacts.
 
-These are independent operations. A newer skill never silently performs either
-of the latter two, and a hash match does not itself supply human approval.
+These are independent operations. A newer skill never silently performs an
+instruction refresh, and a hash match does not itself supply human approval.

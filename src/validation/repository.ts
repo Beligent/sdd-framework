@@ -2,7 +2,7 @@ import { readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { skills, syncAssets } from '../packaging/sync-assets.js';
 import { loadConfig, validateConfig, type ProjectConfig } from './config.js';
-import { localLinkErrors, parseFrontmatter, validateProjectRecords } from './records.js';
+import { localLinkErrors, parseFrontmatter, recordKinds, validateProjectRecords } from './records.js';
 export { localLinkErrors, parseFrontmatter, validateProjectRecords } from './records.js';
 
 async function markdownFiles(directory: string): Promise<string[]> {
@@ -24,11 +24,16 @@ export async function validateRepository(root: string): Promise<string[]> {
   const required = ['README.md', 'AGENTS.md', 'LICENSE', 'CHANGELOG.md', 'docs/architecture.md', 'docs/artifact-model.md', 'docs/validation.md'];
   const templates: Record<string, string[]> = {
     'sdd-init': ['project-overview.md', 'config.json'],
-    'sdd-define': ['requirements.md', 'specification.md', 'epic.md', 'ticket.md', 'compact-task.md', 'approval-record.md', 'adr.md', 'implementation-plan.md'],
-    'sdd-audit': ['verification-report.md'],
+    'sdd-define': ['ticket.md', 'epic.md', 'spec.md'],
   };
   for (const [skill, names] of Object.entries(templates)) for (const name of names) required.push(`skills/${skill}/assets/${name}`);
   for (const name of required) if (!(await exists(path.join(root, name)))) errors.push(`Missing required file: ${name}`);
+  for (const [kind, name] of [['ticket', 'ticket.md'], ['epic', 'epic.md'], ['spec', 'spec.md']] as const) {
+    try {
+      const { data } = parseFrontmatter(await readFile(path.join(root, 'skills/sdd-define/assets', name), 'utf8'));
+      if (data.schema !== recordKinds[kind].schema) errors.push(`skills/sdd-define/assets/${name}: template must declare schema ${recordKinds[kind].schema}`);
+    } catch (error) { errors.push(`skills/sdd-define/assets/${name}: ${error instanceof Error ? error.message : String(error)}`); }
+  }
   for (const skill of skills) {
     const dir = path.join(root, 'skills', skill);
     try {
@@ -47,7 +52,7 @@ export async function validateRepository(root: string): Promise<string[]> {
   for (const file of ['README.md', 'AGENTS.md', 'CHANGELOG.md']) errors.push(...await localLinkErrors(path.join(root, file)));
   try {
     const template = await loadConfig(path.join(root, 'skills/sdd-init/assets/config.json'));
-    errors.push(...validateConfig(template, undefined, true).map((issue) => `config template: ${issue.path ?? ''} ${issue.message}`));
+    errors.push(...validateConfig(template, true).map((issue) => `config template: ${issue.path ?? ''} ${issue.message}`));
   } catch (error) { errors.push(`config template: ${error instanceof Error ? error.message : String(error)}`); }
   for (const name of ['workflow-fixture']) {
     const example = path.join(root, 'examples', name);

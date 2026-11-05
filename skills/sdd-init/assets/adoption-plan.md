@@ -8,7 +8,7 @@ Status: proposed; no configuration changes authorized by this document alone.
 - Architecture, technologies, and validation commands: {{observed_context}}
 - Existing requirements/specifications, decisions, and backlog: {{artifact_map}}
 - Existing assistant discovery and installed skills: {{assistant_inventory}}
-- Proposed workflow policy and authoritative ticket provider: {{workflow_and_provider}}
+- Proposed project checks, tracking and delivery settings: {{checks_tracking_delivery}}
 
 ## Proposed changes
 
@@ -17,9 +17,8 @@ Status: proposed; no configuration changes authorized by this document alone.
 | {{relative_path}} | {{observed_hash_or_absent}} | {{addition_or_managed_section_diff}} | {{project_or_managed_section}} |
 
 Include the complete proposed `.sdd/beligent/config.json` values. List reused paths,
-new artifact directories, managed instruction sections, ownership-state entries,
-and each installation action separately. Do not create a second copy of existing
-requirements, specifications, or tickets.
+managed instruction sections, ownership-state entries and each installation
+action separately. Do not create a second copy of an existing backlog.
 
 ## Conflicts and decisions
 

@@ -1,13 +1,14 @@
 # Architecture
 
-Beligent is a portable Markdown engineering framework with optional tracking.
-Release 1.0.0 follows the implementation runbook with one unversioned configuration;
-see the [default contract decision](decisions/001-default-contract.md).
+Beligent is a portable Markdown engineering framework with optional ticket
+tracking. The [v2 contract decision](decisions/002-v2-contract.md) records the
+design; the [record contract](../skills/sdd-define/references/records.md) is the
+normative reference for tracked records.
 
 | Skill | Responsibility |
 | --- | --- |
-| sdd-init | Inspect/install selected host integrations through a reviewed setup/adoption proposal |
-| sdd-define | Define behavior, standalone tickets, shared specs, optional epics and useful planning |
+| sdd-init | Inspect the project and install selected host integrations through a reviewed proposal |
+| sdd-define | Define behavior, standalone tickets, shared specs and optional epics; useful planning |
 | sdd-implement | Implement, add/update useful tests, verify every criterion and record completion |
 | sdd-audit | Read-only review, verification, diagnosis or status before/after closure |
 | sdd-deliver | Independently authorized scoped Git delivery |
@@ -17,31 +18,28 @@ see the [default contract decision](decisions/001-default-contract.md).
 `.sdd/beligent/config.json` holds settings. `.sdd/beligent/guidance/` holds installed
 general/testing/review and selected stack guidance, linked by AGENTS.md and native
 bridges so ordinary requests inherit standards without invoking a workflow skill.
-Tickets, epics and specs are on-demand paths. No frameworks.json is used.
-One main assistant is default; optional native specialists use bounded assignments,
-relevant criteria/evidence expectations and the same local/project/stack guidance.
+Tickets, epics and specs live in fixed on-demand directories under `.sdd/beligent/`.
+No frameworks.json is used. One main assistant is default; optional native
+specialists use bounded assignments and the same guidance.
 
-Config includes project, assistants, technologies, workflow, testing, Git, tracking,
-artifact paths and ticket paths. Legacy profiles/mandatory completion gates are
-removed. Tracking is opt-in; readonly ticket mentions or audits never authorize
-implementation or record writes. Surface project-wide tracking policy before edits.
-Missing config does not block ordinary authorized code work.
+Config requires `schema` and `hosts`; `stacks`, project `checks`, `tracking` and
+`delivery` are optional. Tracking starts only on explicit intent; read-only ticket
+mentions or audits never authorize implementation or record writes. Missing config
+does not block ordinary authorized code work. Earlier configurations are rejected.
 
 ## Records, evidence and lifecycle
 
-Records use stable IDs and positive integer scope revisions. A standalone ticket
-can hold local criteria; linked specs provide canonical behavior spanning tickets.
-Epics are optional. `checks` maps criteria to command/procedure, actual outcome,
-required flag, ticket revision and implementation snapshot. Every required check
-must pass and every criterion must be covered by current required evidence before
-done. Stale, unrun, blocked or failed required checks keep work open.
+A standalone ticket holds local `### AC-001` criteria; shared specs provide
+behavior spanning tickets through `spec_criteria`. Epics are optional. Each check
+records criteria, command or manual procedure, outcome, revision and `git-tree:`
+snapshot. Done requires every criterion and configured required check to pass at
+the current revision and snapshot; failed, blocked, unrun or stale checks keep work open.
 
-Completion is independent of audit, human acceptance and Git delivery. Honor
-actual project-specific scope authorization; do not invent universal extra gates.
-Audit is read-only by default and may recommend reopening for missed original
-criteria. Authorized reopening preserves old evidence/history and requires fresh
-checks. Newly requested scope is separate work. Delivery uses its own states,
-permissions and `git.delivery_complete_at`; an open PR never establishes a merge.
+Done and cancelled are final; only delivery may change afterwards. Audit is
+optional and read-only; a later fix is ordinary work, or a new ticket when
+tracking is requested. Changing an open ticket's criteria increments its
+revision and appends history. Delivery has its own states and permissions and
+never gates completion.
 
 ## Packaging, setup and ownership
 
@@ -49,23 +47,16 @@ Canonical resources are registered in `src/packaging/sync-assets.ts`. Generated
 PACKAGED.json files identify exact shared-source copies. Each skill is standalone;
 sdd-init carries packaged guidance assets for consumer installation. Read-only
 `src/packaging/hosts.ts` prepares selected-host file plans and preflights unsafe or
-locally modified destinations; it does not apply consumer setup. The external
-pinned skills installer or reviewed exact file copies install native packages.
-The assistant executes the Markdown setup procedure with ordinary file tools.
-
-Only selected host bridges/copies and common guidance are proposed. Inspect duplicate
-skill discovery, old .beligent/docs/sdd installations, current bytes/ownership and
-handwritten instructions before writes. Review clean-break conversion separately;
-never silently overwrite legacy/local content. Identical setup is a byte/timestamp
-no-op. The consumer owns .sdd/beligent, instructions and artifacts. Setup-state and
-usage retain independent format markers; installer provenance stays in its lock.
+locally modified destinations. Setup inspects duplicate skill discovery, pre-v2
+installations and handwritten instructions before writes, and never silently
+overwrites them. Identical setup is a byte/timestamp no-op. The consumer owns
+`.sdd/beligent/`, instructions and records.
 
 ## Tooling and limits
 
-The optional CLI validates configuration and tracked records, diagnoses missing/
-duplicate discovery and legacy config, and imports explicit local numeric usage.
-YAML is a runtime dependency only for record validation; no Python is needed.
-There is no hosted telemetry, ticket service or agent-specific workflow engine.
-Digest conflict checks are observed-change protection, not transactional CAS.
-Structural validation checks declared evidence, never proves test truth or consent.
-See [host evidence](agents.md) and [validation](validation.md).
+The optional CLI validates configuration and records (`sdd validate`, with
+`--since` for final states and `--snapshot` for closure), prints the implementation
+snapshot (`sdd snapshot`), diagnoses installations (`sdd doctor`) and imports
+explicit local numeric usage. There is no hosted telemetry, ticket service or
+workflow engine. Structural validation checks declared evidence; it never proves
+test truth or consent. See [host evidence](agents.md) and [validation](validation.md).

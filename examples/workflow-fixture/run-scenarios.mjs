@@ -5,7 +5,7 @@ const cases = [
   ['direct bug before fix', './before.mjs', false],
   ['direct fix and tracked implementation', './app.mjs', true],
   ['required failure keeps tracked work open', './before.mjs', false],
-  ['post-close audit detects missed original criterion', './audit-regression.mjs', false],
+  ['post-close audit finds a regression in done work', './audit-regression.mjs', false],
 ];
 for (const [name, module, pass] of cases) {
   const run = spawnSync(process.execPath, ['--test', 'regression.test.mjs'], { cwd, env: { ...process.env, BELIGENT_FIXTURE_MODULE: module }, encoding: 'utf8' });

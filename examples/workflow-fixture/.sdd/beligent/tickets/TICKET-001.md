@@ -1,41 +1,31 @@
 ---
-{
-  "id": "TICKET-001",
-  "revision": 1,
-  "status": "done",
-  "implementation": "sha256:5d7655fd0abfcc8efb2c657c9e4c7f16f9e13acf48a91c4a8d952a23fcb6ed88",
-  "checks": [
-    {
-      "id": "node-regression",
-      "criteria": [
-        "TICKET-001/AC-001"
-      ],
-      "required": true,
-      "command": "BELIGENT_FIXTURE_MODULE=./app.mjs node --test regression.test.mjs",
-      "outcome": "pass",
-      "revision": 1,
-      "snapshot": "sha256:5d7655fd0abfcc8efb2c657c9e4c7f16f9e13acf48a91c4a8d952a23fcb6ed88"
-    }
-  ]
-}
+schema: beligent-sdd/ticket/v2
+id: TICKET-001
+title: Empty passport labels default to Passport
+status: done
+revision: 1
+implementation:
+  base: 778afa1f3c24
+  snapshot: git-tree:5aea53cc86db3e41bf77c98e15550bf3f5f951a8
+checks:
+  - id: label-regression
+    criteria: [AC-001]
+    required: true
+    command: BELIGENT_FIXTURE_MODULE=./app.mjs node --test regression.test.mjs
+    coverage: added
+    before: fail
+    tests: [regression.test.mjs]
+    outcome: pass
+    revision: 1
+    snapshot: git-tree:5aea53cc86db3e41bf77c98e15550bf3f5f951a8
 ---
+
 # Empty passport labels default to Passport
 
-## Objective
-
-Empty passport labels default to Passport.
-
-## Behavior
-
-Implement only this bounded behavior.
+A standalone ticket: local criteria, no epic or shared spec.
 
 ## Acceptance criteria
 
 ### AC-001
 
-Empty passport labels default to Passport.
-
-## Fixture status
-
-Illustrative record state; check commands are runnable in this example root.
-The scenario runner executes actual pass/fail reproductions but does not write records or impersonate human decisions.
+A blank or whitespace-only label renders as `Passport`; other labels are trimmed.

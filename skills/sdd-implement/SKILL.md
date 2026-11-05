@@ -14,14 +14,14 @@ present, [engineering guidance](references/implementation.md),
 [diagnosis safeguards](references/shared/diagnosis-and-simplicity.md).
 Load only relevant technology modules from `references/technology/`.
 Prefer shared `.sdd/beligent/guidance/` when installed; packaged references are
-the portable fallback. Missing configuration does not block ordinary authorized code work. Unsupported
-configuration requires a migration proposal before configuration-dependent work.
+the portable fallback. Missing configuration does not block ordinary authorized
+code work. Earlier configurations are rejected, not converted.
 
 1. Establish one current change, the user's authorization, observable behavior,
    criteria, boundaries and existing working changes. Reuse a named task when
    supplied; ask only if multiple tasks are ambiguous. Without tracking, keep
    sufficient definition and verification in chat; do not allocate IDs or write
-   `.sdd/beligent/`, `.sdd/beligent/`, tickets or reports just to implement.
+   `.sdd/beligent/` records just to implement.
 2. Skip already satisfied definition/planning. Clarify blocking gaps together.
    Use concise notes for obvious work. Plan only when complexity, sequencing,
    risk or explicit intent warrants it. Do not plan later backlog work.
@@ -33,22 +33,23 @@ configuration requires a migration proposal before configuration-dependent work.
    decisions. Review trust boundaries, errors, compatibility, documentation,
    maintainability and unnecessary abstraction. Ask before consequential scope
    expansion; defer unrelated findings without creating tickets.
-5. Run relevant checks during implementation. Follow configured testing policy;
-   without configuration use existing project checks proportionate to changed
-   behavior and risk. Record commands and results. Fix introduced failures and
+5. Run relevant checks during implementation: the project checks in config
+   `checks` (always those marked `required`) and other tests proportionate to
+   changed behavior and risk. Record commands and results. Fix introduced failures and
    rerun affected checks for the final diff. Missing tooling/services, skipped
    checks and pre-existing failures remain visible and never become passes.
 6. After two ineffective symptom-level fixes for the same behavior, stop patching
    and apply the diagnosis contract before another corrective attempt. Diagnosis
    does not authorize broader behavior or design changes.
-7. Review the final diff and map each criterion to pass, fail, unverified or a
+7. Review the final diff and map each criterion to pass, fail, blocked, not-run or a
    justified not-applicable result. Request only relevant manual validation not
    already established. Report changed behavior, tests, limits and remaining risk.
-8. For explicitly tracked work, read the [provider contract](references/ticket-management/contract.md)
-   and [mapping](references/ticket-management/markdown.md), then update evidence
-   with conflict checks. Use the [verification template](assets/verification-report.md)
-   only when a separate report is useful. Record structured checks at the current revision/implementation snapshot.
-   Mark done when agreed work and every required check pass; otherwise keep open.
+8. For explicitly tracked work, follow the [record contract](references/records.md).
+   Run `sdd snapshot` on the final implementation, record `implementation` and
+   one check per actual result at the current revision and snapshot, then run
+   `sdd validate --snapshot <TICKET-ID>`. Mark done only when agreed work and
+   every required check pass; a failed check keeps it `in-progress`, an external
+   blocker makes it `blocked`. A done ticket is final; never reopen it.
 
 Stop done/verified, pending required manual validation, blocked, or
 `diagnosis-required`. A separate audit is optional unless project policy requires

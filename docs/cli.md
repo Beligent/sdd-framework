@@ -10,24 +10,29 @@ npx @beligent/sdd-framework usage report
 npx @beligent/sdd-framework version
 ```
 
-`validate` checks `.sdd/beligent/config.json`; to select another config file, use:
+`validate [project-path]` checks `.sdd/beligent/config.json` and every record
+under `.sdd/beligent/`: strict JSON, the v2 shape, record identity and markers,
+references, dependency cycles and closure evidence for every criterion. Required
+failed/blocked/unrun or stale checks reject done; delivery is never a gate.
+Earlier configurations and records are rejected with an actionable message; there
+is no conversion. Two options add Git-based checks:
 
 ```sh
-npx @beligent/sdd-framework validate --config path/to/config.json
+npx @beligent/sdd-framework validate --since main        # done/cancelled final, history kept, revisions bumped
+npx @beligent/sdd-framework validate --snapshot TICKET-042  # recorded snapshot matches the working tree
 ```
 
-It checks strict JSON, duplicate keys, the single unversioned default shape,
-required fields, safe paths, output collisions, record IDs/links/dependencies and
-structured closure evidence for every criterion. Required failed/blocked/unrun or
-stale checks reject done; delivery and human approval are not universal gates.
-`validate` is read-only. Old versioned configurations are rejected with a reviewed
-conversion message. There is no migration command or legacy compatibility mode.
+`snapshot [project-path]` prints the `base` commit and the `git-tree:` snapshot to
+record in a ticket's `implementation`. The snapshot covers the working tree,
+including untracked non-ignored files, and excludes `.sdd/beligent/`. It uses a
+temporary index, so the real index, working tree and refs are untouched; Git may
+store loose objects. `validate` and `snapshot` never write project files.
 
 `doctor` accepts an optional project path. It reports configuration status,
-configured artifact paths that have not been created yet, and whether core
-skills are discoverable (including duplicate-root warnings) in common project locations. Missing skill copies are
-warnings because assistant discovery varies. Missing or invalid configuration
-is an error. A warning-only report exits successfully.
+pre-v2 leftovers (`.beligent/`, old skill names) and whether core skills are
+discoverable (including duplicate-root warnings) in common project locations.
+Missing skill copies are warnings because assistant discovery varies. Missing or
+invalid configuration is an error. A warning-only report exits successfully.
 
 `version` prints the CLI/framework version. `package.json` is authoritative;
 the repository check ensures the lockfile agrees with it. No separate `VERSION` file is used.

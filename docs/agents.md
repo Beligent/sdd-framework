@@ -2,9 +2,9 @@
 
 Beligent keeps workflows in portable skill packages. Project instructions load
 engineering/testing/review references for ordinary requests, even when automatic
-skill matching does not select a skill. Setup renders `{{skills_path}}` to a
-verified installed project path. This is an instruction-based integration;
-loading must be observed in each selected host.
+skill matching does not select a skill. Setup installs that guidance under
+`.sdd/beligent/guidance/` and links it from project instructions. This is an
+instruction-based integration; loading must be observed in each selected host.
 
 The paths below reflect repository documentation researched on 2026-10-18.
 They are discovery candidates, not a new certification of current host behavior.
@@ -52,11 +52,11 @@ disposable repository and the full five-skill set.
    instructions, existing config/artifacts and an edited managed section.
 3. Ask for a small code change without naming a skill or ticket. Confirm the host
    actually reads engineering/testing/review guidance, adds a useful behavioral
-   test where relevant, runs checks and reports evidence. Confirm no SDD ticket,
-   report, approval record or ticket directory appears. Repeat without config.
+   test where relevant, runs checks and reports evidence. Confirm no ticket or
+   record directory appears. Repeat without config.
 4. Explicitly request tracking, then implement the named task. Confirm stable IDs,
-   bounded definition/planning, provider conflict checks, real test execution,
-   manual-validation handling and no premature `done`.
+   bounded definition/planning, real test execution, recorded checks and snapshot,
+   manual-validation handling and no premature `done` (`sdd validate`).
 5. Exercise `sdd-audit` independently for review and diagnosis without a ticket.
    Check observations/hypotheses and scoped recommendations. Test the repeated-fix
    safeguard without pretending test failures establish human acceptance.

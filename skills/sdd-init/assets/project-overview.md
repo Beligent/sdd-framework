@@ -16,9 +16,9 @@ Status: draft. Setup establishes the process; it does not approve product scope.
 
 ## Working agreements
 
-Use `.sdd/beligent/config.json` for the workflow policy, artifact locations,
-assistant choices, technology modules, and ticket provider. Link existing
-documentation here rather than duplicating it.
+Use `.sdd/beligent/config.json` for hosts, stack modules, project checks,
+tracking and delivery settings. Link existing documentation here rather than
+duplicating it.
 
 {{existing_documentation_links_or_open_questions}}
 

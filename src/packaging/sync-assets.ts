@@ -13,11 +13,10 @@ export function mappings(): Mapping[] {
   share('skills/sdd-define/references/shared/governance.md', skills.filter((skill) => skill !== 'sdd-define'), 'references/shared/governance.md');
   share('skills/sdd-define/references/shared/current-task-lifecycle.md', ['sdd-implement', 'sdd-audit'], 'references/shared/current-task-lifecycle.md');
   share('skills/sdd-audit/references/shared/diagnosis-and-simplicity.md', ['sdd-define', 'sdd-implement'], 'references/shared/diagnosis-and-simplicity.md');
-  for (const name of ['contract.md', 'markdown.md']) share(`skills/sdd-define/references/ticket-management/${name}`, ['sdd-implement', 'sdd-audit', 'sdd-deliver'], `references/ticket-management/${name}`);
+  share('skills/sdd-define/references/records.md', ['sdd-implement', 'sdd-audit', 'sdd-deliver'], 'references/records.md');
   for (const name of technologies) share(`skills/sdd-implement/references/technology/${name}.md`, ['sdd-define'], `references/technology/${name}.md`);
   share('skills/sdd-implement/references/testing.md', ['sdd-audit'], 'references/testing.md');
   share('skills/sdd-audit/references/review.md', ['sdd-implement'], 'references/review.md');
-  share('skills/sdd-audit/assets/verification-report.md', ['sdd-implement'], 'assets/verification-report.md');
   for (const [source, name] of [
     ['skills/sdd-implement/references/implementation.md', 'engineering.md'],
     ['skills/sdd-implement/references/testing.md', 'testing.md'],

@@ -11,55 +11,50 @@ without requiring a ticket or configuration. A small edit can use the main
 assistant directly. Optional specialists receive only a bounded assignment,
 relevant criteria and expected evidence, using the same project standards.
 
-Tracking defaults to opt-in. Explicitly requesting tracked work or implementing a
-named ticket selects persistence for that scope. Merely mentioning/reading a
-ticket, auditing it, automatic skill matching or requesting code does not authorize
-record mutation or implementation. Surface any approved project tracking policy
-before edits. Reuse scoped authorization already supplied; never infer consent
+Tracking starts only on explicit intent: requesting tracked work, or naming a
+ticket to implement. Merely mentioning or reading a ticket, auditing it,
+automatic skill matching or requesting code does not authorize record changes or
+implementation. When `tracking.required_for` matches a requested change, say so
+before editing. Reuse scoped authorization already supplied; never infer consent
 from silence or a status. Keep untracked plans, evidence and findings in chat.
 
 ## Scope and sufficient definition
 
 Work on one bounded current increment. Stop defining once behavior is clear,
 criteria testable, material risks resolved/accepted/escalated and no decision
-blocks implementation. Ask blocking questions together. Reuse existing specs and
-plans; do not duplicate shared behavior in tickets. Reversible local choices
-need no ADR. Plan only when useful for risk, sequencing or complexity. Respect
-workflow depth and ask before consequential expansion. Never infer a full backlog.
+blocks implementation. Ask blocking questions together. Reuse existing specs; do
+not duplicate shared behavior in tickets. Plan only when useful for risk,
+sequencing or complexity. Ask before consequential expansion. Never infer a backlog.
 
 Add/update meaningful automated coverage where practical, reuse adequate coverage,
 and run relevant existing/new tests during implementation. Prefer a reproducible
 failing-before/passing-after check. Use manual verification where appropriate.
-Record command/procedure, result, criterion and implementation snapshot/diff.
-Unavailable or unrun checks are unverified. After two ineffective symptom fixes,
+Record command/procedure, result, criterion and implementation snapshot.
+Unavailable or unrun checks are not passes. After two ineffective symptom fixes,
 diagnose the root cause before another patch. Keep observations and hypotheses separate.
 
 ## Completion, audit and delivery
 
 A tracked ticket is done when its agreed work is complete and every required
-check passes for its current revision/snapshot, with evidence for every criterion.
-Failed, blocked, unverified or stale required checks keep it open. Do not fabricate
-results or silently drop a required check. No universal extra acceptance gate,
-commit, push, PR or merge is needed for ticket completion. Honor actual applicable
-project-specific scope authorization; it is distinct from verification.
+check passes for its current revision and snapshot, with evidence for every
+criterion. Failed, blocked, unrun or stale required checks keep it open. Do not
+fabricate results or silently drop a required check. No acceptance decision,
+commit, push, PR or merge is needed for completion. When the project sets
+`tracking.authorization: recorded`, record scope authorization before implementing.
 
-Audit is optional, read-only by default and valid before or after closure. Report
-missed original criteria as reopen recommendations. Mutate a record only with
-explicit update/reopen authorization. Authorized reopening preserves scope and
-prior evidence/history, increments revision and leaves work open for fresh checks.
-Newly requested scope is separate work, tracked only on explicit intent.
+Audit is optional, read-only by default and valid before or after closure. Done
+and cancelled tickets are final; report findings instead of changing them. A later
+fix is ordinary work, or a new ticket when tracking is explicitly requested.
 
-Delivery has its own state and Git permissions. `git.delivery_complete_at` selects
-an observed delivery milestone, never a ticket closure gate. An open PR does not
-establish a merge; never merge without separate explicit authorization.
+Delivery has its own state and Git permissions. `delivery.delivered_at` selects an
+observed delivery milestone, never a closure gate. An open PR does not establish
+a merge; never merge without separate explicit authorization.
 
 ## Persistence and maintenance
 
-Use stable IDs and positive integer revisions for tracked records and shared specs.
-The provider's SHA-256 content digest is an external concurrency token, not a
-substitute for a scope revision. Recheck immediately before mutation and stop on
-conflict. Keep past scope and evidence retrievable; do not erase history to pass
-validation. No-op updates preserve bytes/revisions. Config, instructions and
-artifacts are project-owned. Inspect old installations and present a reviewed
-clean-break plan; never silently overwrite them. Usage remains explicit/local
-and contains no prompt, response or tool content.
+Records follow the record contract: stable IDs, a positive scope revision for
+tickets, append-only history. Re-read a record immediately before writing and
+stop on a concurrent change. No-op updates preserve bytes. Config, instructions
+and records are project-owned. Earlier Beligent installations are reported, never
+converted or silently overwritten. Usage remains explicit/local and contains no
+prompt, response or tool content.

@@ -2,8 +2,9 @@
 import { access, appendFile, lstat, mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validateProjectRecords } from '../validation/records.js';
-import { loadConfig, parseConfig, validateConfig, type ProjectConfig } from '../validation/config.js';
+import { parseRecords, readRecordFiles, transitionErrors, validateProjectRecords } from '../validation/records.js';
+import { authorizationMode, loadConfig, locateConfig, validateConfig, type ProjectConfig } from '../validation/config.js';
+import { computeSnapshot, recordFilesAtRef } from '../validation/git.js';
 import { createUsageRecord, formatUsageFooter, parseUsageRecords, summarizeUsage, type SupportedAgent } from '../usage/usage.js';
 
 const root = process.cwd();
@@ -15,32 +16,60 @@ async function version(): Promise<number> {
   return 0;
 }
 
+const validateUsage = 'Usage: sdd validate [project-path] [--since <git-ref>] [--snapshot <TICKET-ID>]';
+
 async function validate(args: string[]): Promise<number> {
-  let configPath = path.join(root, '.sdd', 'beligent', 'config.json');
-  if (args.length > 0) {
-    if (args[0] !== '--config' || !args[1] || args.length > 2) {
-      console.error('Usage: sdd validate [--config <path>]');
-      return 2;
-    }
-    configPath = path.resolve(root, args[1]);
+  let project: string | undefined; let since: string | undefined; let ticket: string | undefined;
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index]!;
+    if (arg === '--since' || arg === '--snapshot') {
+      const value = args[index + 1];
+      if (!value || value.startsWith('--')) { console.error(validateUsage); return 2; }
+      if (arg === '--since') since = value; else ticket = value;
+      index += 1;
+    } else if (!arg.startsWith('--') && project === undefined) project = arg;
+    else { console.error(validateUsage); return 2; }
   }
+  const projectRoot = path.resolve(root, project ?? '.');
+  const located = locateConfig(projectRoot);
+  if ('issue' in located) { console.error(located.issue); return 1; }
   try {
-    const config = await loadConfig(configPath);
-    const directory = path.dirname(configPath);
-    const projectRoot = path.basename(directory) === 'beligent' && path.basename(path.dirname(directory)) === '.sdd'
-      ? path.dirname(path.dirname(directory))
-      : path.dirname(directory);
-    const issues = validateConfig(config, projectRoot);
+    const config = await loadConfig(located.path);
+    const issues = validateConfig(config);
     if (issues.length) {
       for (const issue of issues) console.error(`${issue.path ? `${issue.path}: ` : ''}${issue.message}`);
       return 1;
     }
-    const recordErrors = await validateProjectRecords(projectRoot, config as ProjectConfig);
-    if (recordErrors.length) { for (const error of recordErrors) console.error(error); return 1; }
-    console.log(`Configuration and records are valid: ${path.relative(root, configPath) || configPath}`);
+    const errors = await validateProjectRecords(projectRoot, config as ProjectConfig);
+    if (since) {
+      const { records: before } = parseRecords(recordFilesAtRef(projectRoot, since));
+      const { records: after } = parseRecords((await readRecordFiles(projectRoot)).files);
+      errors.push(...transitionErrors(before, after));
+    }
+    if (ticket) {
+      const { records } = parseRecords((await readRecordFiles(projectRoot)).files);
+      const implementation = records.find((record) => record.id === ticket && record.kind === 'ticket')?.data.implementation;
+      const recorded = typeof implementation === 'object' && implementation !== null ? (implementation as Record<string, unknown>).snapshot : undefined;
+      const { snapshot } = computeSnapshot(projectRoot);
+      if (recorded !== snapshot) errors.push(`${ticket}: recorded snapshot ${String(recorded)} does not match the working tree ${snapshot}`);
+    }
+    if (errors.length) { for (const error of errors) console.error(error); return 1; }
+    console.log(`Configuration and records are valid: ${path.relative(root, projectRoot) || '.'}`);
     return 0;
   } catch (error) {
-    console.error(`Cannot validate ${configPath}: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`Cannot validate ${projectRoot}: ${error instanceof Error ? error.message : String(error)}`);
+    return 1;
+  }
+}
+
+async function snapshot(args: string[]): Promise<number> {
+  if (args.length > 1 || args[0]?.startsWith('--')) { console.error('Usage: sdd snapshot [project-path]'); return 2; }
+  try {
+    const result = computeSnapshot(path.resolve(root, args[0] ?? '.'));
+    console.log(`base: ${result.base ?? 'none'}\nsnapshot: ${result.snapshot}`);
+    return 0;
+  } catch (error) {
+    console.error(`Cannot compute snapshot: ${error instanceof Error ? error.message : String(error)}`);
     return 1;
   }
 }
@@ -50,6 +79,7 @@ const skillRoots = [
   '.codex/skills', '.opencode/skills', '.windsurf/skills',
 ];
 const coreSkills = ['sdd-init', 'sdd-define', 'sdd-implement', 'sdd-audit', 'sdd-deliver'];
+const legacySkills = ['adopt-project', 'init-project', 'define-work', 'plan-work', 'develop-task', 'implement-ticket', 'verify-work', 'diagnose', 'deliver-work'];
 
 async function exists(file: string): Promise<boolean> {
   try { await access(file); return true; } catch { return false; }
@@ -61,36 +91,32 @@ async function doctor(args: string[]): Promise<number> {
     return 2;
   }
   const projectRoot = path.resolve(root, args[0] ?? '.');
-  const configPath = path.join(projectRoot, '.sdd', 'beligent', 'config.json');
   let failures = 0;
   console.log(`Project: ${projectRoot}`);
-  if (!(await exists(configPath))) {
-    const legacy = await exists(path.join(projectRoot, '.beligent/config.json'));
-    console.error(legacy ? 'ERROR legacy .beligent installation detected; use sdd-init for a reviewed clean-break setup. Existing files were preserved.' : 'ERROR .sdd/beligent/config.json is missing. Use sdd-init to configure the project.');
+  if (await exists(path.join(projectRoot, '.beligent'))) console.warn('WARN pre-v2 .beligent/ directory found; v2 ignores it and never converts or deletes it.');
+  const located = locateConfig(projectRoot);
+  if ('issue' in located) {
+    console.error(`ERROR ${located.issue}`);
     failures += 1;
   } else {
     try {
-      const config = parseConfig(await readFile(configPath, 'utf8')) as ProjectConfig;
-      const issues = validateConfig(config, projectRoot);
+      const config = await loadConfig(located.path) as ProjectConfig;
+      const issues = validateConfig(config);
       if (issues.length) {
         console.error('ERROR configuration is invalid:');
         for (const issue of issues) console.error(`  ${issue.path ? `${issue.path}: ` : ''}${issue.message}`);
         failures += 1;
       } else {
-        const workflow = `, rigor ${config.workflow.rigor}, design depth ${config.workflow.design_depth}, tracking ${config.tracking.mode}`;
-        console.log(`OK configuration${workflow}`);
-        for (const [name, configuredPath] of Object.entries(config.artifacts)) {
-          const target = path.join(projectRoot, configuredPath);
-          if (!(await exists(target))) console.log(`INFO artifact path not created yet: ${name} -> ${configuredPath}`);
-        }
-        for (const [name, configuredPath] of Object.entries(config.tickets.paths)) {
-          const target = path.join(projectRoot, configuredPath);
-          if (!(await exists(target))) console.log(`INFO ticket path not created yet: ${name} -> ${configuredPath}`);
-        }
+        console.log(`OK configuration: hosts ${config.hosts.join(', ')}; stacks ${config.stacks?.join(', ') || 'none'}; authorization ${authorizationMode(config)}`);
       }
     } catch (error) {
       console.error(`ERROR cannot read configuration: ${error instanceof Error ? error.message : String(error)}`);
       failures += 1;
+    }
+  }
+  for (const relative of skillRoots) {
+    for (const skill of legacySkills) {
+      if (await exists(path.join(projectRoot, relative, skill, 'SKILL.md'))) console.warn(`WARN pre-v2 skill ${relative}/${skill} found; remove it by hand to avoid conflicting instructions.`);
     }
   }
 
@@ -219,10 +245,11 @@ async function main(): Promise<void> {
   switch (command) {
     case 'version': status = await version(); break;
     case 'validate': status = await validate(args); break;
+    case 'snapshot': status = await snapshot(args); break;
     case 'doctor': status = await doctor(args); break;
     case 'usage': status = await usage(args); break;
     case '--help': case '-h': case undefined:
-      console.log('Beligent SDD tooling\n\nUsage: sdd <command>\n\nCommands:\n  validate [--config <path>]  Validate project configuration\n  doctor [project-path]       Diagnose configuration and installed skills\n  usage import ...            Import Codex or Claude structured token usage for one skill\n  usage report [--json]       Report locally recorded usage grouped by skill\n  usage footer ...            Format exact host usage for display after a chat response\n  version                     Print the framework version');
+      console.log('Beligent SDD tooling\n\nUsage: sdd <command>\n\nCommands:\n  validate [project-path] [--since <ref>] [--snapshot <TICKET-ID>]\n                              Validate configuration and records; --since enforces final states and\n                              revision rules against a Git revision; --snapshot checks a ticket\'s\n                              recorded implementation snapshot against the working tree\n  snapshot [project-path]     Print the implementation snapshot to record in a ticket\n  doctor [project-path]       Diagnose configuration, installed skills and pre-v2 leftovers\n  usage import ...            Import Codex or Claude structured token usage for one skill\n  usage report [--json]       Report locally recorded usage grouped by skill\n  usage footer ...            Format exact host usage for display after a chat response\n  version                     Print the framework version');
       status = command === undefined ? 2 : 0;
       break;
     default:

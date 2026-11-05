@@ -42,8 +42,8 @@ the Git skill collection.
 
 After installation, ask the assistant to run `sdd-init`:
 
-> Use sdd-init here. Identify the project type, assistants, technologies,
-> workflow policy, and artifact paths. Show the setup proposal before applying changes.
+> Use sdd-init here. Identify the hosts, stacks and project checks. Show the
+> setup proposal before applying changes.
 
 The workflow creates project-owned configuration and only approved integration
 files. Review the diff and resulting paths. See [the README setup guide](../README.md#install)
@@ -87,9 +87,9 @@ npx @beligent/sdd-framework validate
 npx @beligent/sdd-framework doctor
 ```
 
-`validate` checks `.sdd/beligent/config.json` and reports errors without changing
-files. `doctor` diagnoses config validity, expected artifact paths, and core
-skill discovery. It can also inspect another project directory:
+`validate` checks `.sdd/beligent/config.json` and tracked records and reports errors
+without changing files. `doctor` diagnoses config validity, pre-v2 leftovers and
+core skill discovery. It can also inspect another project directory:
 
 ```sh
 npx @beligent/sdd-framework doctor /path/to/project
