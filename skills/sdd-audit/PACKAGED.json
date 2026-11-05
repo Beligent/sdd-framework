@@ -1,0 +1,10 @@
+{
+  "generated": true,
+  "resources": {
+    "references/shared/current-task-lifecycle.md": "skills/sdd-define/references/shared/current-task-lifecycle.md",
+    "references/shared/governance.md": "skills/sdd-define/references/shared/governance.md",
+    "references/testing.md": "skills/sdd-implement/references/testing.md",
+    "references/ticket-management/contract.md": "skills/sdd-define/references/ticket-management/contract.md",
+    "references/ticket-management/markdown.md": "skills/sdd-define/references/ticket-management/markdown.md"
+  }
+}

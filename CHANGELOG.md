@@ -2,6 +2,36 @@
 
 ## Unreleased
 
+- Remove the artifact-only `team-task-tracker` example, the historical MVP plan,
+  the six-skill validation report and upgrade/conversion guidance. No backward
+  compatibility is provided.
+
+## 1.0.0 — 2026-11-05
+
+Breaking release following 0.2.1. **New setup is required** for existing projects:
+install the five new skills, start a fresh agent session and run `sdd-init` to
+review configuration conversion and managed instruction refresh. Skill updates
+alone are insufficient. Preserve project artifacts, paths and handwritten guidance.
+
+- Replace nine skills with `sdd-init`, `sdd-define`, `sdd-implement`, `sdd-audit`
+  and `sdd-deliver`; combine setup/adoption, definition/planning and audit/diagnosis.
+- Replace configuration schemas 1 and 2 with one unversioned default schema;
+  remove the CLI migration command and legacy compatibility paths.
+- Apply engineering guidance to ordinary requests; default ticket tracking to
+  opt-in. Keep untracked definition, planning and evidence in chat.
+- Add useful tests and execute verification during implementation. Close tracked work when agreed behavior and current required criterion checks
+  pass; keep failed/blocked/unrun/stale work open. Delivery is independent.
+- Remove the redundant `VERSION` file. Read release version from `package.json`
+  and check both lockfile version entries with `npm run check:version`.
+- Use .sdd/beligent for config, shared guidance and on-demand tracking; validate
+  structured criterion/revision/snapshot evidence and read-only post-close audits.
+- Add runnable direct/tracked/blocked/audit scenarios and selected-host installation
+  byte/preservation/duplicate-discovery checks.
+- Document source/project folder layouts, agent targets, skill invocation, CLI
+  commands and the limits of installation versus live host evidence.
+
+This local change does not publish a package or certify new live host behavior.
+
 ## 0.2.1 — 2026-10-22
 
 Added opt-in local token accounting for Codex and Claude structured output.

@@ -1,6 +1,6 @@
 {
   "name": "@beligent/sdd-framework",
-  "version": "0.2.1",
+  "version": "1.0.0",
   "description": "A vendor-neutral, Agent Skills-based Specification-Driven Development framework.",
   "license": "MIT",
   "private": false,
@@ -48,7 +48,8 @@
     "README.md",
     "CHANGELOG.md",
     "LICENSE",
-    "VERSION"
+    "dist/validation/records.js",
+    "docs/decisions/001-default-contract.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -62,7 +63,8 @@
     "check:version": "node --import tsx src/validation/version-cli.ts"
   },
   "dependencies": {
-    "ajv": "^8.17.1"
+    "ajv": "^8.17.1",
+    "yaml": "^2.8.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -72,7 +74,6 @@
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.2",
-    "vitest": "^5.0.5",
-    "yaml": "^2.8.1"
+    "vitest": "^5.0.5"
   }
 }

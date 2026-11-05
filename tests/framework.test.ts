@@ -5,9 +5,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { stringify } from 'yaml';
-import { parseConfig, previewConfigMigration, validateConfig, type ProjectConfig, type Schema1ProjectConfig, type Schema2ProjectConfig } from '../src/validation/config.js';
+import { createHash } from 'node:crypto';
+import { configDefaults, parseConfig, validateConfig, type ProjectConfig } from '../src/validation/config.js';
 import { localLinkErrors, parseFrontmatter, validateProjectRecords, validateRepository } from '../src/validation/repository.js';
 import { mappings, skills, syncAssets } from '../src/packaging/sync-assets.js';
+import { prepareHostPackage, preflightHostPackage, hostRoots } from '../src/packaging/hosts.js';
 import { createUsageRecord, formatUsageFooter, parseAgentUsage, summarizeUsage } from '../src/usage/usage.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -20,19 +22,11 @@ async function tempdir(): Promise<string> {
 }
 afterEach(async () => { await Promise.all(temporary.splice(0).map((dir) => rm(dir, { recursive: true, force: true }))); });
 
-async function templateConfig(): Promise<Schema2ProjectConfig> {
-  const text = await readFile(path.join(root, 'skills/init-project/assets/config.json'), 'utf8');
-  const config = JSON.parse(text) as Schema2ProjectConfig;
+async function templateConfig(): Promise<ProjectConfig> {
+  const text = await readFile(path.join(root, 'skills/sdd-init/assets/config.json'), 'utf8');
+  const config = JSON.parse(text) as ProjectConfig;
   config.project = { name: 'Fixture project', type: 'existing application' };
   return config;
-}
-
-async function schema1Config(): Promise<Schema1ProjectConfig> {
-  const config = structuredClone(await templateConfig()) as Record<string, unknown>;
-  delete config.workflow;
-  delete config.testing;
-  delete config.git;
-  return { ...config, schema_version: 1 } as Schema1ProjectConfig;
 }
 
 async function writeArtifact(file: string, metadata: Record<string, unknown>, body: string): Promise<void> {
@@ -41,13 +35,9 @@ async function writeArtifact(file: string, metadata: Record<string, unknown>, bo
 }
 
 describe('consumer configuration validation', () => {
-  it('accepts valid schema 1 config and the schema 2 project template', async () => {
-    expect(validateConfig(await schema1Config())).toEqual([]);
-    expect(validateConfig(JSON.parse(await readFile(path.join(root, 'skills/init-project/assets/config.json'), 'utf8')), undefined, true)).toEqual([]);
-  });
 
   it('requires rendered project values in consumer config while allowing the bundled template in repository checks', async () => {
-    const template = JSON.parse(await readFile(path.join(root, 'skills/init-project/assets/config.json'), 'utf8')) as ProjectConfig;
+    const template = JSON.parse(await readFile(path.join(root, 'skills/sdd-init/assets/config.json'), 'utf8')) as ProjectConfig;
     expect(validateConfig(template).some((issue) => issue.message.includes('unrendered'))).toBe(true);
     expect(validateConfig(template, undefined, true)).toEqual([]);
     template.artifacts.requirements = '../escape';
@@ -64,51 +54,19 @@ describe('consumer configuration validation', () => {
     expect(validateConfig({ ...config, technologies: ['unknown-stack'] }).length).toBeGreaterThan(0);
   });
 
-  it('calls unknown schema versions out separately and never migrates input', async () => {
-    const config = await templateConfig();
-    const before = structuredClone(config);
-    const errors = validateConfig({ ...config, schema_version: 3 });
-    expect(errors[0]?.message).toContain('separate migration');
-    expect(config).toEqual(before);
-    for (const schemaVersion of [true, false, 0, 3, null, '1']) {
-      const issue = validateConfig({ ...config, schema_version: schemaVersion });
-      expect(issue[0]?.message).toContain('separate migration');
-    }
-  });
-
-  it('preserves custom profiles and requires implementation and completion gates', async () => {
-    const config = await templateConfig();
-    config.profiles.maintenance = { artifacts: ['ticket'], approvals: ['implementation', 'completion'] };
-    config.profile = 'maintenance';
-    expect(validateConfig(config)).toEqual([]);
-    config.profiles.maintenance.approvals = ['scope'];
-    expect(validateConfig(config).some((issue) => issue.message.includes('implementation and completion'))).toBe(true);
-  });
-
-  it('preserves schema 1 standard defaults and rejects vNext configuration fields', async () => {
-    const config = await schema1Config();
-    expect(config.schema_version).toBe(1);
-    expect(config.profile).toBe('standard');
-    expect(config.profiles.standard).toEqual({
-      artifacts: ['overview', 'requirements', 'specification', 'plan', 'ticket'],
-      approvals: ['scope', 'implementation', 'completion'],
-    });
-    expect(validateConfig({ ...config, workflow: { rigor: 'standard' } }).length).toBeGreaterThan(0);
-  });
-
-  it.each(['light', 'standard', 'rigorous'] as const)('accepts schema 2 rigor %s independently of design depth', async (rigor) => {
+  it.each(['light', 'standard', 'rigorous'] as const)('accepts rigor %s independently of design depth', async (rigor) => {
     const config = await templateConfig();
     config.workflow.rigor = rigor;
     expect(validateConfig(config)).toEqual([]);
   });
 
-  it.each(['current-task', 'near-term', 'comprehensive'] as const)('accepts schema 2 design depth %s independently of rigor', async (designDepth) => {
+  it.each(['current-task', 'near-term', 'comprehensive'] as const)('accepts design depth %s independently of rigor', async (designDepth) => {
     const config = await templateConfig();
     config.workflow.design_depth = designDepth;
     expect(validateConfig(config)).toEqual([]);
   });
 
-  it('rejects invalid schema 2 policy values and unknown configuration keys', async () => {
+  it('rejects invalid policy values and unknown configuration keys', async () => {
     const config = await templateConfig();
     expect(validateConfig({ ...config, workflow: { ...config.workflow, rigor: 'casual' } }).length).toBeGreaterThan(0);
     expect(validateConfig({ ...config, workflow: { ...config.workflow, design_depth: 'forever' } }).length).toBeGreaterThan(0);
@@ -119,11 +77,12 @@ describe('consumer configuration validation', () => {
     expect(validateConfig({ ...config, unexpected: true }).length).toBeGreaterThan(0);
   });
 
-  it('uses the recommended schema 2 workflow, testing, and delivery defaults', async () => {
+  it('uses the recommended workflow, testing, and delivery defaults', async () => {
     const config = await templateConfig();
+    expect({ tracking: config.tracking, workflow: config.workflow, testing: config.testing, git: config.git }).toEqual(configDefaults);
     expect(config.workflow).toEqual({ rigor: 'standard', design_depth: 'current-task', ask_before_expansion: true });
     expect(config.testing).toMatchObject({ lint: 'always', typecheck: 'always', unit: 'when-relevant', e2e: 'critical-user-journeys', accessibility: 'affected-ui', security: 'risk-based' });
-    expect(config.git).toMatchObject({ strategy: 'feature-branches', conventional_commits: true, push_after_commit: 'ask', pull_request: 'feature-complete', task_complete_at: 'merged-pr' });
+    expect(config.git).toMatchObject({ strategy: 'feature-branches', conventional_commits: true, push_after_commit: 'ask', pull_request: 'feature-complete', delivery_complete_at: 'merged-pr' });
     expect(validateConfig(config)).toEqual([]);
   });
 
@@ -131,11 +90,9 @@ describe('consumer configuration validation', () => {
     expect(() => parseConfig('{"a":1,"a":2}')).toThrow('Duplicate JSON key');
     expect(() => parseConfig('{"a":{"b":1,"b":2}}')).toThrow('Duplicate JSON key');
     expect(() => parseConfig('{"x":NaN}')).toThrow();
-    expect(() => parseConfig('{"schema_version":1.0}')).toThrow('JSON integer 1');
-    expect(() => parseConfig('{"schema_version":2.0}')).toThrow('JSON integer 2');
   });
 
-  it.each(['../outside', '/absolute', 'C:/outside', 'docs\\outside', './docs', 'docs//work', 'AGENTS.md', '.beligent/config.json', '.agents/skills/x', '{{path}}'])('rejects unsafe or reserved path %s', async (value) => {
+  it.each(['../outside', '/absolute', 'C:/outside', 'docs\\outside', './docs', 'docs//work', 'AGENTS.md', '.sdd/beligent/config.json', '.agents/skills/x', '{{path}}'])('rejects unsafe or reserved path %s', async (value) => {
     const config = await templateConfig();
     config.artifacts.requirements = value;
     expect(validateConfig(config).length).toBeGreaterThan(0);
@@ -146,7 +103,7 @@ describe('consumer configuration validation', () => {
     config.tickets.paths.tickets = config.tickets.paths.epics;
     expect(validateConfig(config).some((issue) => issue.message.includes('overlap'))).toBe(true);
     const other = await templateConfig();
-    other.artifacts.overview = 'docs/sdd/tickets/overview.md';
+    other.artifacts.overview = '.sdd/beligent/tickets/overview.md';
     expect(validateConfig(other).some((issue) => issue.message.includes('authoritative'))).toBe(true);
 
     const nested = await templateConfig();
@@ -190,35 +147,6 @@ describe('consumer configuration validation', () => {
     expect(validateConfig(config, project).some((issue) => issue.message.includes('hard-linked'))).toBe(true);
   });
 
-  it('previews an idempotent schema 1 migration without changing legacy paths or provider settings', async () => {
-    const config = await schema1Config();
-    config.profile = 'lightweight';
-    config.artifacts.overview = 'handbook/context.md';
-    config.tickets.paths = { epics: 'planning/epics', tickets: 'planning/tickets' };
-    const preview = previewConfigMigration(config);
-    expect(preview.changed).toBe(true);
-    expect(preview.workflow_mapping).toBe('lightweight-to-light');
-    expect(preview.config.workflow).toEqual({ rigor: 'light', design_depth: 'current-task', ask_before_expansion: true });
-    expect(preview.config.artifacts).toEqual(config.artifacts);
-    expect(preview.config.tickets).toEqual(config.tickets);
-    const repeated = previewConfigMigration(preview.config);
-    expect(repeated.changed).toBe(false);
-    expect(repeated.workflow_mapping).toBe('already-schema-2');
-    expect(repeated.config).toEqual(preview.config);
-  });
-
-  it('maps schema 1 standard conservatively and permits explicit adoption of the new standard policy', async () => {
-    const config = await schema1Config();
-    const compatible = previewConfigMigration(config);
-    expect(compatible.workflow_mapping).toBe('standard-to-rigorous');
-    expect(compatible.config.workflow.rigor).toBe('rigorous');
-    expect(compatible.config.profile).toBe('standard');
-    expect(compatible.config.profiles).toEqual(config.profiles);
-    const recommended = previewConfigMigration(config, true);
-    expect(recommended.workflow_mapping).toBe('explicit-standard');
-    expect(recommended.config.workflow.rigor).toBe('standard');
-    expect(recommended.config.workflow.design_depth).toBe('current-task');
-  });
 });
 
 describe('canonical skill packaging', () => {
@@ -287,173 +215,15 @@ describe('canonical skill packaging', () => {
     }
     expect(await syncAssets(project)).toEqual([]);
     const dest = path.join(project, mappings()[0]!.destination);
-    const before = (await stat(dest)).mtimeNs;
+    const before = (await stat(dest, { bigint: true })).mtimeNs;
     expect(await syncAssets(project)).toEqual([]);
-    expect((await stat(dest)).mtimeNs).toBe(before);
+    expect((await stat(dest, { bigint: true })).mtimeNs).toBe(before);
   });
 });
 
 describe('repository and artifact validation', () => {
-  it('validates the checked-in nine-skill repository and worked example', async () => {
+  it('validates the checked-in five-skill repository and worked example', async () => {
     expect(await validateRepository(root)).toEqual([]);
-  });
-
-  it('keeps incremental principles canonical and synchronizes their packaged copies', async () => {
-    const source = 'skills/define-work/references/shared/governance.md';
-    const governance = await readFile(path.join(root, source), 'utf8');
-    const normalizedGovernance = governance.replace(/\s+/g, ' ');
-    for (const principle of [
-      'smallest amount of specification',
-      'Specification stop rule',
-      'Treat ordinary local and reversible implementation choices as local',
-      'solely because a future version may need it',
-      'future candidate rather than expanding the current implementation',
-      'perform root-cause diagnosis',
-      'When `ask_before_expansion` is true',
-      'compact task is sufficient',
-    ]) expect(normalizedGovernance).toContain(principle);
-
-    for (const mapping of mappings().filter((entry) => entry.source === source)) {
-      expect(await readFile(path.join(root, mapping.destination), 'utf8')).toBe(governance);
-    }
-  });
-
-  it('packages one current-task lifecycle contract and keeps public skill routing bounded', async () => {
-    const source = 'skills/define-work/references/shared/current-task-lifecycle.md';
-    const lifecycle = await readFile(path.join(root, source), 'utf8');
-    const lifecycleMappings = mappings().filter((entry) => entry.source === source);
-    expect(lifecycleMappings.map((entry) => entry.destination).sort()).toEqual([
-      'skills/develop-task/references/shared/current-task-lifecycle.md',
-      'skills/implement-ticket/references/shared/current-task-lifecycle.md',
-      'skills/plan-work/references/shared/current-task-lifecycle.md',
-      'skills/verify-work/references/shared/current-task-lifecycle.md',
-    ]);
-    for (const mapping of lifecycleMappings) expect(await readFile(path.join(root, mapping.destination), 'utf8')).toBe(lifecycle);
-
-    const define = await readFile(path.join(root, 'skills/define-work/SKILL.md'), 'utf8');
-    const plan = await readFile(path.join(root, 'skills/plan-work/SKILL.md'), 'utf8');
-    const implement = await readFile(path.join(root, 'skills/implement-ticket/SKILL.md'), 'utf8');
-    const verify = await readFile(path.join(root, 'skills/verify-work/SKILL.md'), 'utf8');
-    const init = await readFile(path.join(root, 'skills/init-project/SKILL.md'), 'utf8');
-    const adopt = await readFile(path.join(root, 'skills/adopt-project/SKILL.md'), 'utf8');
-    const normalized = [lifecycle, define, plan, implement, verify, init, adopt].map((text) => text.replace(/\s+/g, ' '));
-    expect(normalized[0]).toContain('schema 1 retains its profile-based workflow and artifacts');
-    expect(normalized[0]).toContain('Reference that context from the task instead of copying');
-    expect(normalized[1]).toContain('ordinary schema-2 feature request');
-    expect(normalized[1]).toContain('do not infer project planning, a complete backlog, or comprehensive design');
-    expect(normalized[2]).toContain('`plan-task` | Default');
-    expect(normalized[2]).toContain('`plan-project` | Explicit project planning intent');
-    expect(normalized[2]).toContain('no separate PLAN is useful');
-    expect(normalized[3]).toContain('do not regenerate specifications');
-    expect(normalized[0]).toContain('feature-drift, future-candidate, decision-significance, and depth-expansion rules');
-    expect(normalized[3]).toContain("shared lifecycle's feature-drift, future-candidate");
-    expect(normalized[4]).toContain("project's `testing` preferences");
-    expect(normalized[4]).toContain('An available category is not mandatory');
-    expect(normalized[4]).toContain('without rewriting them');
-    expect(normalized[5]).toContain('one concise batch of workflow, testing, and delivery defaults');
-    expect(normalized[6]).toContain('preferences already present in a valid configuration');
-  });
-
-  it('discovers develop-task and preserves its deterministic orchestration decisions', async () => {
-    expect(skills).toEqual(['init-project', 'adopt-project', 'define-work', 'plan-work', 'implement-ticket', 'verify-work', 'develop-task', 'diagnose', 'deliver-work']);
-    const entrypoint = await readFile(path.join(root, 'skills/develop-task/SKILL.md'), 'utf8');
-    const parsed = parseFrontmatter(entrypoint);
-    expect(parsed.data.name).toBe('develop-task');
-    const decisions = new Map([...parsed.body.matchAll(/^\| ([^|]+?) \| ([^|]+?) \|$/gm)].map((match) => [match[1], match[2]]));
-    expect(decisions.get('Ready compact task')).toContain('Skip definition and planning; implement');
-    expect(decisions.get('Ready expanded task with applicable PLAN')).toContain('Reuse its REQ/SPEC/PLAN; implement');
-    expect(decisions.get('Small blocking gap')).toContain('clarification');
-    expect(decisions.get('Stop rule met and implementation is obvious')).toContain('Skip PLAN');
-    expect(decisions.get('Coordinated steps, cross-component change, sequencing, material risk, rollback, non-obvious tradeoff, or rigorous requirement')).toContain('Use `plan-task`');
-    expect(decisions.get('Consequential expansion beyond selected depth')).toContain('ask before broader design');
-    expect(decisions.get('Manual observation needed after automated checks')).toContain('manual-validation checklist');
-    expect(decisions.get('Two ineffective symptom-level fixes do not resolve the same behavior')).toContain('diagnosis-required');
-    expect(decisions.get('Verification complete')).toContain('ready-for-delivery');
-    const normalized = parsed.body.replace(/\s+/g, ' ');
-    expect(normalized).toContain('Never infer `plan-epic` or `plan-project`');
-    expect(normalized).toContain('Select checks from project `testing` policy and changed risk');
-    expect(normalized).toContain('Run categories configured as `always`');
-    expect(normalized).toContain('apply conditional categories only when their condition is relevant');
-    expect(normalized).toContain('Do not add unrelated test infrastructure');
-    expect(normalized).toContain('Do not create follow-up tickets unless explicitly requested');
-    expect(normalized).toContain('Do not commit, push, create or merge a pull request');
-    expect(normalized).toContain('Schema 1 retains its existing profile artifacts, readiness, and approval gates');
-  });
-
-  it('discovers diagnose and applies one canonical deterministic safeguard contract', async () => {
-    const source = 'skills/diagnose/references/shared/diagnosis-and-simplicity.md';
-    const contract = await readFile(path.join(root, source), 'utf8');
-    const contractMappings = mappings().filter((entry) => entry.source === source);
-    expect(contractMappings.map((entry) => entry.destination).sort()).toEqual([
-      'skills/define-work/references/shared/diagnosis-and-simplicity.md',
-      'skills/develop-task/references/shared/diagnosis-and-simplicity.md',
-      'skills/implement-ticket/references/shared/diagnosis-and-simplicity.md',
-      'skills/plan-work/references/shared/diagnosis-and-simplicity.md',
-      'skills/verify-work/references/shared/diagnosis-and-simplicity.md',
-    ]);
-    for (const mapping of contractMappings) expect(await readFile(path.join(root, mapping.destination), 'utf8')).toBe(contract);
-
-    const entrypoint = parseFrontmatter(await readFile(path.join(root, 'skills/diagnose/SKILL.md'), 'utf8'));
-    expect(entrypoint.data.name).toBe('diagnose');
-    const fixActions = new Map([...contract.matchAll(/^\| ([^|]+?) \| ([^|]+?) \|$/gm)].map((match) => [match[1], match[2]]));
-    expect(fixActions.get('0 or 1')).toContain('correction and reverification remain allowed');
-    expect(fixActions.get('2 or more')).toContain('`diagnosis-required`');
-    for (const state of [
-      '`implementation-failure`', '`test-failure`', '`acceptance-criterion-failure`', '`manual-validation-failure`',
-      '`diagnosis-required`', '`specification-contradiction`', '`scope-expansion-required`', '`unrelated-discovery`',
-    ]) expect(fixActions.has(state)).toBe(true);
-
-    const normalizedContract = contract.replace(/\s+/g, ' ');
-    const normalizedSkill = entrypoint.body.replace(/\s+/g, ' ');
-    expect(normalizedSkill).toContain('is not required');
-    expect(normalizedSkill).toContain('without forcing new SDD artifacts');
-    expect(normalizedContract).toContain('new project-planning artifacts');
-    expect(normalizedSkill).toContain('Separate observations from hypotheses');
-    expect(normalizedSkill).toContain('do not change product behavior or perform unrelated cleanup');
-    expect(normalizedContract).toContain('ask before creating broader specification or design');
-    expect(normalizedContract).toContain('materially simpler implementation');
-    expect(normalizedContract).toContain('speculative abstractions or infrastructure');
-    expect(normalizedContract).toContain('Directly necessary support code is not feature drift');
-    expect(normalizedContract).toContain('Significant unapproved drift pauses or fails the current task');
-    expect(normalizedContract).toContain('unrelated discovery remains a concise future candidate');
-    expect(normalizedContract).toContain('Process overhead appears disproportionate to the current task');
-    expect(normalizedContract).toContain('Do not delete, compact, rewrite, or bypass required artifacts');
-  });
-
-  it('discovers deliver-work and applies deterministic delivery policy without real remotes', async () => {
-    const entrypoint = parseFrontmatter(await readFile(path.join(root, 'skills/deliver-work/SKILL.md'), 'utf8'));
-    const contract = await readFile(path.join(root, 'skills/deliver-work/references/delivery.md'), 'utf8');
-    expect(entrypoint.data.name).toBe('deliver-work');
-    expect(mappings().some((entry) => entry.destination === 'skills/deliver-work/references/ticket-management/contract.md')).toBe(true);
-
-    const rows = [...contract.matchAll(/^\| ([^|]+?) \| ([^|]+?) \|(?: ([^|]+?) \|)?$/gm)].map((match) => [match[1], match[2], match[3]]);
-    const state = (name: string) => rows.find((row) => row[0] === name)?.[1];
-    const policy = (setting: string, value: string) => rows.find((row) => row[0] === setting && row[1] === value)?.[2];
-    expect(state('`ready-for-delivery`')).toContain('passed preflight');
-    expect(state('`blocked`')).toContain('prerequisite');
-    expect(state('`commit`')).toContain('commit exists locally');
-    expect(state('`merged-pr`')).toContain('merge was observed');
-    expect(policy('`conventional_commits`', '`true`')).toContain('conventional commit');
-    expect(policy('`agent_may_commit`', '`false`')).toContain('must not commit');
-    expect(policy('`agent_may_commit`', '`true`')).toContain('may commit only after preflight');
-    expect(policy('`push_after_commit`', '`ask`')).toContain('Stop at `committed` and ask');
-    expect(policy('`push_after_commit`', '`always`')).toContain('Push after commit');
-    expect(policy('`pull_request`', '`always`')).toContain('Create a PR');
-    expect(policy('`pull_request`', '`never`')).toContain('Do not create a PR');
-
-    const normalizedContract = contract.replace(/\s+/g, ' ');
-    const normalizedSkill = entrypoint.body.replace(/\s+/g, ' ');
-    expect(normalizedContract).toContain('Surface unrelated modifications and exclude them');
-    expect(normalizedContract).toContain('Never force push by default');
-    expect(normalizedContract).toContain('briefly states implemented behavior, criterion references, meaningful automated results');
-    expect(normalizedContract).toContain('Never merge solely because the PR exists or checks pass');
-    expect(normalizedContract).toContain('Schema-1 projects have no framework Git policy');
-    expect(normalizedSkill).toContain('Direct invocation does not require prior use of `develop-task`');
-    expect(normalizedSkill).toContain('Do not implement, refactor, respecify, diagnose');
-    expect(normalizedSkill).toContain('or select the next task');
-    const develop = (await readFile(path.join(root, 'skills/develop-task/SKILL.md'), 'utf8')).replace(/\s+/g, ' ');
-    expect(develop).toContain('Do not commit, push, create or merge a pull request');
-    expect(develop).toContain('independently invoked `deliver-work` skill');
   });
 
   it('rejects duplicate YAML keys and links outside a skill package', async () => {
@@ -475,18 +245,18 @@ describe('repository and artifact validation', () => {
   it('validates the copied Copilot fragment from its eventual project destination', async () => {
     const project = await tempdir();
     await writeFile(path.join(project, 'AGENTS.md'), '# Existing instructions\n');
-    const config = await schema1Config();
-    await mkdir(path.join(project, '.beligent'), { recursive: true });
-    await writeFile(path.join(project, '.beligent/config.json'), JSON.stringify(config));
+    const config = await templateConfig();
+    await mkdir(path.join(project, '.sdd', 'beligent'), { recursive: true });
+    await writeFile(path.join(project, '.sdd/beligent/config.json'), JSON.stringify(config));
     await mkdir(path.join(project, '.github'), { recursive: true });
-    await cp(path.join(root, 'skills/init-project/assets/copilot.fragment.md'), path.join(project, '.github/copilot-instructions.md'));
+    await cp(path.join(root, 'skills/sdd-init/assets/copilot.fragment.md'), path.join(project, '.github/copilot-instructions.md'));
     expect(await localLinkErrors(path.join(project, '.github/copilot-instructions.md'), project)).toEqual([]);
   });
 
   it('checks installed skill copies after their source checkout is unavailable', async () => {
     const copied = path.join(await tempdir(), 'skills');
     await cp(path.join(root, 'skills'), copied, { recursive: true });
-    for (const skill of ['init-project', 'adopt-project', 'define-work', 'plan-work', 'implement-ticket', 'verify-work']) {
+    for (const skill of skills) {
       const boundary = path.join(copied, skill);
       const documents = await markdownFilesForTest(boundary);
       for (const document of documents) {
@@ -496,176 +266,16 @@ describe('repository and artifact validation', () => {
     }
   });
 
-  it('rejects ready work with missing links, invalid references, cycles, and false completion', async () => {
-    const source = path.join(root, 'examples/team-task-tracker');
-    const project = path.join(await tempdir(), 'example');
-    await cp(source, project, { recursive: true });
-    const config = JSON.parse(await readFile(path.join(project, '.beligent/config.json'), 'utf8')) as ProjectConfig;
-    const ticketPath = path.join(project, 'docs/sdd/tickets/TICKET-001.md');
-    const originalTicket = await readFile(ticketPath, 'utf8');
-    let ticket = originalTicket.replace('dependencies: []', 'dependencies: [TICKET-MISSING]');
-    await writeFile(ticketPath, ticket);
-    expect((await validateProjectRecords(project, config)).some((error) => error.includes('unresolved'))).toBe(true);
-    ticket = originalTicket.replace('dependencies: []', 'dependencies: [TICKET-002]');
-    const secondPath = path.join(project, 'docs/sdd/tickets/TICKET-002.md');
-    const second = await readFile(secondPath, 'utf8');
-    await writeFile(secondPath, second.replace('dependencies: []', 'dependencies: [TICKET-001]'));
-    await writeFile(ticketPath, ticket);
-    expect((await validateProjectRecords(project, config)).some((error) => error.includes('Dependency cycle'))).toBe(true);
-    await writeFile(secondPath, second);
-    ticket = originalTicket.replace('status: todo', 'status: done');
-    await writeFile(ticketPath, ticket);
-    expect((await validateProjectRecords(project, config)).some((error) => error.includes('done requires'))).toBe(true);
-  });
-
-  it('accepts a ready todo ticket without invented approval and rejects malformed refs and false done', async () => {
-    const source = path.join(root, 'examples/team-task-tracker');
-    const project = path.join(await tempdir(), 'example');
-    await cp(source, project, { recursive: true });
-    const config = JSON.parse(await readFile(path.join(project, '.beligent/config.json'), 'utf8')) as ProjectConfig;
-    expect(await validateProjectRecords(project, config)).toEqual([]);
-    const ticketPath = path.join(project, 'docs/sdd/tickets/TICKET-001.md');
-    const original = await readFile(ticketPath, 'utf8');
-    await writeFile(ticketPath, original.replace('specifications: [SPEC-001]', 'specifications: null'));
-    expect((await validateProjectRecords(project, config)).some((error) => error.includes('string list'))).toBe(true);
-    await writeFile(ticketPath, original.replace('status: todo', 'status: done'));
-    expect((await validateProjectRecords(project, config)).some((error) => error.includes('done requires'))).toBe(true);
-  });
-
-  it('keeps schema 1 lightweight tickets ready with local criteria and no separate requirement or specification', async () => {
-    const project = await tempdir();
-    const config = await schema1Config();
-    config.profile = 'lightweight';
-    await writeArtifact(path.join(project, config.tickets.paths.tickets, 'TICKET-001.md'), {
-      id: 'TICKET-001', kind: 'ticket', title: 'Small isolated change', status: 'todo', readiness: 'ready', priority: 'low',
-      requirements: [], specifications: [], acceptance_criteria: ['TICKET-001/AC-001'], dependencies: [], approval_refs: [], evidence: [],
-    }, '# Small isolated change\n\n## Acceptance criteria\n\n### AC-001\n\nThe change has an observable result.\n');
-    expect(await validateProjectRecords(project, config)).toEqual([]);
-  });
-
-  it('accepts a schema 2 standard compact task when the stop rule is met', async () => {
-    const project = await tempdir();
-    const config = await templateConfig();
-    await writeArtifact(path.join(project, config.tickets.paths.tickets, 'TICKET-012.md'), {
-      id: 'TICKET-012', status: 'todo', rigor: 'standard', design_depth: 'current-task',
-    }, '# Contact page\n\n## Objective\n\nLet customers contact the team.\n\n## Behavior\n\nExpose a public contact route.\n\n## Acceptance criteria\n\n### AC-001\n\nThe route is reachable from navigation.\n\n## Verification\n\n- Run the relevant UI checks.\n');
-    expect(await validateProjectRecords(project, config)).toEqual([]);
-  });
-
-  it('keeps schema 2 compact blockers preliminary and rejects them as ready', async () => {
-    const project = await tempdir();
-    const config = await templateConfig();
-    const file = path.join(project, config.tickets.paths.tickets, 'TICKET-012.md');
-    const metadata = { id: 'TICKET-012', status: 'todo', rigor: 'standard', design_depth: 'current-task', readiness: 'ready' };
-    const body = '# Contact page\n\n## Objective\n\nLet customers contact the team.\n\n## Behavior\n\nExpose a public contact route.\n\n## Acceptance criteria\n\n### AC-001\n\nThe route is reachable.\n\n## Blocking questions\n\nWhich contact provider is approved?\n';
-    await writeArtifact(file, metadata, body);
-    expect((await validateProjectRecords(project, config)).some((error) => error.includes('unresolved blocking questions'))).toBe(true);
-    await writeArtifact(file, { ...metadata, readiness: 'preliminary' }, body);
-    expect(await validateProjectRecords(project, config)).toEqual([]);
-  });
-
-  it('preserves schema 1 compact-task rejection and requires expanded artifacts for schema 2 rigorous work', async () => {
-    const project = await tempdir();
-    const body = '# Contact page\n\n## Objective\n\nLet customers contact the team.\n\n## Behavior\n\nExpose a public contact route.\n\n## Acceptance criteria\n\n### AC-001\n\nThe route is reachable.\n';
-    const metadata = { id: 'TICKET-012', status: 'todo', rigor: 'standard', design_depth: 'current-task' };
-    const schema1 = await schema1Config();
-    await writeArtifact(path.join(project, schema1.tickets.paths.tickets, 'TICKET-012.md'), metadata, body);
-    expect((await validateProjectRecords(project, schema1)).some((error) => error.includes('normalized ticket contract'))).toBe(true);
-    const schema2 = await templateConfig();
-    schema2.workflow.rigor = 'rigorous';
-    await writeArtifact(path.join(project, schema2.tickets.paths.tickets, 'TICKET-012.md'), { ...metadata, rigor: 'rigorous' }, body);
-    expect((await validateProjectRecords(project, schema2)).some((error) => error.includes('requires expanded artifacts'))).toBe(true);
-  });
-
-  it('lets schema 2 standard expanded tickets use local criteria without separate requirement or specification links', async () => {
-    const project = await tempdir();
-    const config = await templateConfig();
-    await writeArtifact(path.join(project, config.tickets.paths.tickets, 'TICKET-001.md'), {
-      id: 'TICKET-001', kind: 'ticket', title: 'Small change', status: 'todo', readiness: 'ready', priority: 'medium',
-      requirements: [], specifications: [], acceptance_criteria: ['TICKET-001/AC-001'], dependencies: [], approval_refs: [], evidence: [],
-    }, '# Small change\n\n## Acceptance criteria\n\n### AC-001\n\nThe change has an observable result.\n');
-    expect(await validateProjectRecords(project, config)).toEqual([]);
-  });
-
-  it('keeps existing expanded schema 2 work usable', async () => {
-    const project = path.join(await tempdir(), 'expanded-schema-2');
-    await cp(path.join(root, 'examples/team-task-tracker'), project, { recursive: true });
-    const config = await templateConfig();
-    await writeFile(path.join(project, '.beligent/config.json'), JSON.stringify(config, null, 2));
-    expect(await validateProjectRecords(project, config)).toEqual([]);
-  });
-
-  it('reports missing requirements/criteria, unlinked spec criteria, duplicate IDs and boolean revisions', async () => {
-    const project = path.join(await tempdir(), 'example');
-    await cp(path.join(root, 'examples/team-task-tracker'), project, { recursive: true });
-    const config = JSON.parse(await readFile(path.join(project, '.beligent/config.json'), 'utf8')) as ProjectConfig;
-    const ticketPath = path.join(project, 'docs/sdd/tickets/TICKET-001.md');
-    const ticketText = await readFile(ticketPath, 'utf8');
-    const metadata = parseFrontmatter(ticketText).data;
-
-    await writeArtifact(ticketPath, { ...metadata, requirements: ['REQ-999'] }, '# Ticket\n');
-    expect((await validateProjectRecords(project, config)).some((error) => error.includes('unresolved requirements'))).toBe(true);
-    await writeArtifact(ticketPath, { ...metadata, acceptance_criteria: ['SPEC-001/AC-999'] }, '# Ticket\n');
-    expect((await validateProjectRecords(project, config)).some((error) => error.includes('AC-999'))).toBe(true);
-
-    await writeArtifact(path.join(project, 'docs/sdd/specifications/SPEC-002.md'), { id: 'SPEC-002', revision: 1, status: 'draft' }, '# Other specification\n\n## AC-001\nOther behavior.\n');
-    await writeArtifact(ticketPath, { ...metadata, acceptance_criteria: ['SPEC-002/AC-001'] }, '# Ticket\n');
-    expect((await validateProjectRecords(project, config)).some((error) => error.includes('does not belong to a linked specification'))).toBe(true);
-
-    await writeFile(ticketPath, ticketText);
-    await cp(ticketPath, path.join(path.dirname(ticketPath), 'renamed-copy.md'));
-    expect((await validateProjectRecords(project, config)).some((error) => error.includes('Duplicate artifact ID'))).toBe(true);
-    await rm(path.join(path.dirname(ticketPath), 'renamed-copy.md'));
-
-    const requirementPath = path.join(project, 'docs/sdd/requirements/REQ-001.md');
-    const requirement = parseFrontmatter(await readFile(requirementPath, 'utf8'));
-    await writeArtifact(requirementPath, { ...requirement.data, revision: true }, requirement.body);
-    expect((await validateProjectRecords(project, config)).some((error) => error.includes('positive integer'))).toBe(true);
-  });
-
-  it('does not treat an illustrative approval or pending verification as completion', async () => {
-    const project = path.join(await tempdir(), 'example');
-    await cp(path.join(root, 'examples/team-task-tracker'), project, { recursive: true });
-    const config = JSON.parse(await readFile(path.join(project, '.beligent/config.json'), 'utf8')) as ProjectConfig;
-    const ticketPath = path.join(project, 'docs/sdd/tickets/TICKET-001.md');
-    const ticket = parseFrontmatter(await readFile(ticketPath, 'utf8')).data;
-    await writeArtifact(ticketPath, { ...ticket, status: 'done', approval_refs: ['APPR-001'], evidence: ['VERIFY-001'] }, '# Ticket\n');
-    const errors = await validateProjectRecords(project, config);
-    expect(errors.some((error) => error.includes('not a recorded real approval'))).toBe(true);
-    expect(errors.some((error) => error.includes('done requires'))).toBe(true);
-  });
-
-  it('requires completion approval to cover the exact ticket ID', async () => {
-    const project = path.join(await tempdir(), 'example');
-    await cp(path.join(root, 'examples/team-task-tracker'), project, { recursive: true });
-    const config = JSON.parse(await readFile(path.join(project, '.beligent/config.json'), 'utf8')) as ProjectConfig;
-    const ticketPath = path.join(project, 'docs/sdd/tickets/TICKET-001.md');
-    const ticket = parseFrontmatter(await readFile(ticketPath, 'utf8')).data;
-    ticket.status = 'done';
-    ticket.approval_refs = ['APPR-001'];
-    await writeArtifact(ticketPath, ticket, '# Ticket\n');
-    const approvalPath = path.join(project, 'docs/sdd/approvals/APPR-001.md');
-    const approval = {
-      id: 'APPR-001', revision: 1, status: 'approved', gate: 'completion', decision: 'approved',
-      approver: 'Fixture reviewer', source: 'fixture://review/1',
-      artifacts: [{ id: 'TICKET-0010', revision: 'fixture-snapshot' }],
-    };
-    await writeArtifact(approvalPath, approval, '# Test-only simulated decision\n');
-    expect((await validateProjectRecords(project, config)).some((error) => error.includes('done requires'))).toBe(true);
-    approval.artifacts = [{ id: 'TICKET-001', revision: 'fixture-snapshot' }];
-    await writeArtifact(approvalPath, approval, '# Test-only simulated decision\n');
-    expect(await validateProjectRecords(project, config)).toEqual([]);
-  });
 });
 
 describe('skill usage accounting', () => {
   it('normalizes Codex totals and aggregates records without source content', () => {
     const source = '{"type":"turn.completed","usage":{"input_tokens":100,"input_tokens_details":{"cached_tokens":40},"output_tokens":25,"output_tokens_details":{"reasoning_tokens":5},"total_tokens":125},"secret":"do not retain"}\n';
     expect(parseAgentUsage('codex', source)).toMatchObject({ input_tokens: 100, cached_input_tokens: 40, output_tokens: 25, reasoning_tokens: 5, total_tokens: 125 });
-    const item = createUsageRecord('codex', 'define-work', 'TICKET-1', source, '2026-10-22T00:00:00.000Z');
+    const item = createUsageRecord('codex', 'sdd-define', 'TICKET-1', source, '2026-10-22T00:00:00.000Z');
     expect(JSON.stringify(item)).not.toContain('do not retain');
-    expect(formatUsageFooter(item)).toBe('Token usage — define-work (codex): 125 total | 100 input | 40 cached input | 0 cache write | 25 output | 5 reasoning');
-    expect(summarizeUsage([item, { ...item, id: 'another' }])).toMatchObject([{ skill: 'define-work', runs: 2, total_tokens: 250 }]);
+    expect(formatUsageFooter(item)).toBe('Token usage — sdd-define (codex): 125 total | 100 input | 40 cached input | 0 cache write | 25 output | 5 reasoning');
+    expect(summarizeUsage([item, { ...item, id: 'another' }])).toMatchObject([{ skill: 'sdd-define', runs: 2, total_tokens: 250 }]);
   });
 
   it('sums Claude streaming message usage when the result has cost but no aggregate usage', () => {
@@ -685,64 +295,69 @@ describe('CLI', () => {
   it('prints version and returns expected usage/unknown-command exit codes', () => {
     const version = run(['version']);
     expect(version.status).toBe(0);
-    expect(version.stdout.trim()).toBe('0.2.1');
+    expect(version.stdout.trim()).toBe('1.0.0');
     expect(run(['unknown']).status).toBe(2);
+    expect(run(['migrate-config']).status).toBe(2);
     expect(run(['validate', '--unknown']).status).toBe(2);
   });
 
-  it('keeps the npm package version and VERSION file in sync', async () => {
+  it('keeps the authoritative package version and lockfile in sync', async () => {
     const pkg = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')) as { version: string };
-    expect((await readFile(path.join(root, 'VERSION'), 'utf8')).trim()).toBe(pkg.version);
+    const lock = JSON.parse(await readFile(path.join(root, 'package-lock.json'), 'utf8')) as { version: string; packages: Record<string, { version: string }> };
+    expect(lock.version).toBe(pkg.version);
+    expect(lock.packages['']?.version).toBe(pkg.version);
+  });
+
+  it('reports either lockfile version mismatch without changing release metadata', async () => {
+    const project = await tempdir();
+    const script = path.join(project, 'src/validation/version-cli.ts');
+    await mkdir(path.dirname(script), { recursive: true });
+    await cp(path.join(root, 'src/validation/version-cli.ts'), script);
+    await writeFile(path.join(project, 'package.json'), JSON.stringify({ version: '1.0.0', type: 'module' }));
+    const lockPath = path.join(project, 'package-lock.json');
+    for (const lock of [
+      { version: '0.2.1', packages: { '': { version: '1.0.0' } } },
+      { version: '1.0.0', packages: { '': { version: '0.2.1' } } },
+    ]) {
+      const before = JSON.stringify(lock);
+      await writeFile(lockPath, before);
+      const result = spawnSync(process.execPath, ['--import', 'tsx', script], { cwd: root, encoding: 'utf8' });
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('Version mismatch');
+      expect(await readFile(lockPath, 'utf8')).toBe(before);
+    }
   });
 
   it('imports Codex and Claude token usage and reports totals by skill without retaining prompts', async () => {
     const project = await tempdir();
     const codex = path.join(project, 'codex.jsonl');
     const claude = path.join(project, 'claude.jsonl');
-    const store = path.join(project, '.beligent/usage.jsonl');
+    const store = path.join(project, '.sdd/beligent/usage.jsonl');
     await writeFile(codex, '{"type":"item.completed","text":"private prompt"}\n{"type":"turn.completed","usage":{"input_tokens":100,"input_tokens_details":{"cached_tokens":40},"output_tokens":25,"output_tokens_details":{"reasoning_tokens":5},"total_tokens":125}}\n');
     await writeFile(claude, '{"type":"assistant","message":{"usage":{"input_tokens":30,"cache_read_input_tokens":10,"cache_creation_input_tokens":4,"output_tokens":8}}}\n{"type":"assistant","message":{"usage":{"input_tokens":20,"output_tokens":7}}}\n{"type":"result","total_cost_usd":0.012}\n');
 
-    const footer = run(['usage', 'footer', '--agent', 'codex', '--skill', 'define-work', '--file', codex]);
+    const footer = run(['usage', 'footer', '--agent', 'codex', '--skill', 'sdd-define', '--file', codex]);
     expect(footer.status).toBe(0);
-    expect(footer.stdout.trim()).toBe('Token usage — define-work (codex): 125 total | 100 input | 40 cached input | 0 cache write | 25 output | 5 reasoning');
-    expect(run(['usage', 'import', '--agent', 'codex', '--skill', 'define-work', '--file', codex, '--task', 'TICKET-1', '--store', store]).status).toBe(0);
-    expect(run(['usage', 'import', '--agent', 'claude', '--skill', 'develop-task', '--file', claude, '--store', store]).status).toBe(0);
-    expect(run(['usage', 'import', '--agent', 'codex', '--skill', 'define-work', '--file', codex, '--task', 'TICKET-1', '--store', store]).stdout).toContain('already imported');
+    expect(footer.stdout.trim()).toBe('Token usage — sdd-define (codex): 125 total | 100 input | 40 cached input | 0 cache write | 25 output | 5 reasoning');
+    expect(run(['usage', 'import', '--agent', 'codex', '--skill', 'sdd-define', '--file', codex, '--task', 'TICKET-1', '--store', store]).status).toBe(0);
+    expect(run(['usage', 'import', '--agent', 'claude', '--skill', 'sdd-implement', '--file', claude, '--store', store]).status).toBe(0);
+    expect(run(['usage', 'import', '--agent', 'codex', '--skill', 'sdd-define', '--file', codex, '--task', 'TICKET-1', '--store', store]).stdout).toContain('already imported');
     const report = run(['usage', 'report', '--store', store, '--json']);
     expect(report.status).toBe(0);
     const summary = JSON.parse(report.stdout) as Array<{ skill: string; total_tokens: number; cost_usd: number }>;
-    expect(summary.find((item) => item.skill === 'define-work')?.total_tokens).toBe(125);
-    expect(summary.find((item) => item.skill === 'develop-task')).toMatchObject({ total_tokens: 79, cost_usd: 0.012 });
+    expect(summary.find((item) => item.skill === 'sdd-define')?.total_tokens).toBe(125);
+    expect(summary.find((item) => item.skill === 'sdd-implement')).toMatchObject({ total_tokens: 79, cost_usd: 0.012 });
     expect(await readFile(store, 'utf8')).not.toContain('private prompt');
   });
 
   it('validates a project config and returns a nonzero exit status for bad config', async () => {
     const project = await tempdir();
-    await mkdir(path.join(project, '.beligent'), { recursive: true });
+    await mkdir(path.join(project, '.sdd', 'beligent'), { recursive: true });
     const config = await templateConfig();
-    await writeFile(path.join(project, '.beligent/config.json'), JSON.stringify(config));
-    expect(run(['validate', '--config', path.join(project, '.beligent/config.json')]).status).toBe(0);
-    await writeFile(path.join(project, '.beligent/config.json'), JSON.stringify({ ...config, schema_version: 3 }));
-    expect(run(['validate', '--config', path.join(project, '.beligent/config.json')]).status).toBe(1);
-  });
-
-  it('previews before an explicitly confirmed schema migration and preserves the compatibility mapping', async () => {
-    const project = await tempdir();
-    const configPath = path.join(project, '.beligent', 'config.json');
-    await mkdir(path.dirname(configPath), { recursive: true });
-    await writeFile(configPath, JSON.stringify(await schema1Config(), null, 2));
-    const preview = run(['migrate-config', '--config', configPath]);
-    expect(preview.status).toBe(0);
-    expect(preview.stdout).toContain('"workflow_mapping": "standard-to-rigorous"');
-    expect((JSON.parse(await readFile(configPath, 'utf8')) as ProjectConfig).schema_version).toBe(1);
-    expect(run(['migrate-config', '--config', configPath, '--write']).status).toBe(2);
-    const write = run(['migrate-config', '--config', configPath, '--adopt-recommended-workflow', '--write', '--confirm']);
-    expect(write.status).toBe(0);
-    const migrated = JSON.parse(await readFile(configPath, 'utf8')) as Schema2ProjectConfig;
-    expect(migrated.schema_version).toBe(2);
-    expect(migrated.workflow.rigor).toBe('standard');
-    expect(run(['migrate-config', '--config', configPath]).stdout).toContain('"changed": false');
+    await writeFile(path.join(project, '.sdd/beligent/config.json'), JSON.stringify(config));
+    expect(run(['validate', '--config', path.join(project, '.sdd/beligent/config.json')]).status).toBe(0);
+    await writeFile(path.join(project, '.sdd/beligent/config.json'), JSON.stringify({ ...config, schema_version: 3 }));
+    expect(run(['validate', '--config', path.join(project, '.sdd/beligent/config.json')]).status).toBe(1);
   });
 
   it('doctor reports missing config and warns about absent skills without modifying the target', async () => {
@@ -757,18 +372,18 @@ describe('CLI', () => {
   it('doctor reports a valid config and discovers installed project skills', async () => {
     const project = await tempdir();
     const config = await templateConfig();
-    await mkdir(path.join(project, '.beligent'), { recursive: true });
-    await writeFile(path.join(project, '.beligent/config.json'), JSON.stringify(config));
-    await mkdir(path.join(project, '.agents/skills/init-project'), { recursive: true });
-    await writeFile(path.join(project, '.agents/skills/init-project/SKILL.md'), '---\nname: init-project\ndescription: setup\n---\n');
+    await mkdir(path.join(project, '.sdd', 'beligent'), { recursive: true });
+    await writeFile(path.join(project, '.sdd/beligent/config.json'), JSON.stringify(config));
+    await mkdir(path.join(project, '.agents/skills/sdd-init'), { recursive: true });
+    await writeFile(path.join(project, '.agents/skills/sdd-init/SKILL.md'), '---\nname: sdd-init\ndescription: setup\n---\n');
     const result = run(['doctor', project]);
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain('OK configuration: schema 2, profile standard, rigor standard, design depth current-task');
-    expect(result.stdout).toContain('init-project');
+    expect(result.stdout).toContain('OK configuration, rigor standard, design depth current-task, tracking opt-in');
+    expect(result.stdout).toContain('sdd-init');
     expect(result.stderr).toContain('WARN skills not found');
-    expect(result.stderr).toContain('develop-task');
-    expect(result.stderr).toContain('diagnose');
-    expect(result.stderr).toContain('deliver-work');
+    expect(result.stderr).toContain('sdd-implement');
+    expect(result.stderr).toContain('sdd-audit');
+    expect(result.stderr).toContain('sdd-deliver');
   });
 });
 
@@ -791,3 +406,227 @@ async function markdownFilesForTest(directory: string): Promise<string[]> {
   }));
   return contents.flat();
 }
+
+describe('default configuration and tracked completion', () => {
+  it('supports only the unversioned default and leaves legacy inputs unchanged', async () => {
+    const config = await templateConfig();
+    expect(validateConfig(config)).toEqual([]);
+    expect(config.tracking.mode).toBe('opt-in');
+    for (const schema_version of [1, 2, 3, true, null, '1']) {
+      const legacy = { ...config, schema_version };
+      const snapshot = structuredClone(legacy);
+      expect(validateConfig(legacy)[0]?.message).toContain('reviewed conversion');
+      expect(legacy).toEqual(snapshot);
+    }
+    expect(validateConfig({ ...config, tracking: { mode: 'automatic' } }).length).toBeGreaterThan(0);
+    expect(validateConfig({ ...config, tracking: { mode: 'always' } })).toEqual([]);
+  });
+
+  it('validates untracked configuration without creating artifact directories', async () => {
+    const project = await tempdir();
+    const config = await templateConfig();
+    expect(validateConfig(config, project)).toEqual([]);
+    expect(await validateProjectRecords(project, config)).toEqual([]);
+    expect(await readdirSafe(project)).toEqual([]);
+  });
+
+});
+
+const taskBody = '# Change\n\n## Objective\n\nFix one behavior.\n\n## Behavior\n\nProduce the correct result.\n\n## Acceptance criteria\n\n### AC-001\n\nThe regression check passes.\n';
+function passingTicket(): Record<string, unknown> {
+  return { id: 'TICKET-001', revision: 1, status: 'done', implementation: 'sha256:fixture', checks: [{ id: 'regression', criteria: ['TICKET-001/AC-001'], required: true, command: 'node --test', outcome: 'pass', revision: 1, snapshot: 'sha256:fixture' }] };
+}
+async function ticketCase(metadata: Record<string, unknown>, body = taskBody): Promise<string[]> {
+  const project = await tempdir();
+  const config = await templateConfig();
+  await writeArtifact(path.join(project, config.tickets.paths.tickets, 'TICKET-001.md'), metadata, body);
+  return validateProjectRecords(project, config);
+}
+
+describe('runbook record lifecycle', () => {
+  it('closes a standalone ticket without human acceptance, an epic, shared spec or delivery', async () => {
+    expect(await ticketCase(passingTicket())).toEqual([]);
+  });
+  it('keeps delivery state separate while validating its declared evidence', async () => {
+    const record = passingTicket();
+    record.delivery = { state: 'blocked', reason: 'Push permission pending' };
+    expect(await ticketCase(record)).toEqual([]);
+    record.delivery = { state: 'committed' };
+    expect((await ticketCase(record)).join(' ')).toContain('observed reference');
+    record.delivery = { state: 'delivered', reference: 'fixture-commit', point: 'commit' };
+    expect((await ticketCase(record)).join(' ')).toContain('delivery milestone');
+  });
+  it('allows preliminary or blocked questions but never closes unresolved original scope', async () => {
+    const body = taskBody + '\n## Blocking questions\nWhich provider is required?\n';
+    expect(await ticketCase({ id: 'TICKET-001', revision: 1, status: 'blocked' }, body)).toEqual([]);
+    expect((await ticketCase(passingTicket(), body)).join(' ')).toContain('unresolved blocking questions');
+  });
+  it.each(['fail', 'blocked', 'unverified', 'not-applicable'])('keeps a ticket open for required %s checks', async (outcome) => {
+    const record = passingTicket();
+    (record.checks as Record<string, unknown>[])[0]!.outcome = outcome;
+    expect((await ticketCase(record)).join(' ')).toContain('keep open');
+    record.status = 'blocked';
+    if (outcome === 'not-applicable') (record.checks as Record<string, unknown>[])[0]!.reason = 'Fixture';
+    expect(await ticketCase(record)).toEqual([]);
+  });
+  it('rejects narrative failure evidence and missing structured results at closure', async () => {
+    expect((await ticketCase({ id: 'TICKET-001', revision: 1, status: 'done', implementation: 'fixture' }, taskBody + '\n## Evidence\nRequired check: FAIL.\n')).join(' ')).toContain('structured required checks');
+  });
+  it.each(['revision', 'snapshot'])('rejects stale check %s', async (field) => {
+    const record = passingTicket();
+    (record.checks as Record<string, unknown>[])[0]![field] = field === 'revision' ? 2 : 'old-snapshot';
+    expect((await ticketCase(record)).join(' ')).toContain('stale');
+  });
+  it('requires a reviewed implementation snapshot and evidence for every criterion', async () => {
+    const record = passingTicket();
+    delete record.implementation;
+    expect((await ticketCase(record)).join(' ')).toContain('implementation snapshot');
+    expect((await ticketCase(passingTicket(), taskBody + '\n### AC-002\nAnother original behavior.\n')).join(' ')).toContain('TICKET-001/AC-002');
+  });
+  it('accepts recorded manual checks and rejects a procedure-free result', async () => {
+    const record = passingTicket();
+    const check = (record.checks as Record<string, unknown>[])[0]!;
+    delete check.command; check.procedure = 'Observe the affected route using fixture account.';
+    expect(await ticketCase(record)).toEqual([]);
+    delete check.procedure;
+    expect((await ticketCase(record)).join(' ')).toContain('invalid criterion check');
+  });
+  it('preserves prior evidence while an authorized reopen makes it stale', async () => {
+    const record = passingTicket();
+    const oldChecks = structuredClone(record.checks);
+    record.revision = 2; record.status = 'todo';
+    record.history = [{ revision: 1, reason: 'Audit found original AC-001 unmet; explicit reopen authorized', checks: oldChecks, snapshot: record.implementation }];
+    expect(await ticketCase(record)).toEqual([]);
+    record.status = 'done';
+    expect((await ticketCase(record)).join(' ')).toContain('stale');
+    (record.checks as Record<string, unknown>[])[0]!.revision = 2;
+    expect(await ticketCase(record)).toEqual([]);
+    expect((record.history as Record<string, unknown>[])[0]!.checks).toEqual(oldChecks);
+  });
+  it('validates shared spec references, optional epic membership, dependencies and duplicate IDs', async () => {
+    const project = await tempdir(); const config = await templateConfig();
+    const spec = path.join(project, config.artifacts.specifications!, 'SPEC-001.md');
+    await writeArtifact(spec, { id: 'SPEC-001', revision: 1, status: 'ready' }, '# Shared behavior\n\n## AC-001\nCorrect result.\n');
+    const record = passingTicket(); record.specifications = ['SPEC-001']; record.acceptance_criteria = ['SPEC-001/AC-001']; record.epic = 'EPIC-001';
+    (record.checks as Record<string, unknown>[])[0]!.criteria = ['SPEC-001/AC-001'];
+    const ticket = path.join(project, config.tickets.paths.tickets, 'TICKET-001.md');
+    await writeArtifact(ticket, record, '# Task reuses shared behavior.\n');
+    const epic = { id: 'EPIC-001', revision: 1, status: 'todo', tickets: ['TICKET-001'] };
+    await writeArtifact(path.join(project, config.tickets.paths.epics, 'EPIC-001.md'), epic, '# Outcome\n\n## AC-001\nChild completes.\n');
+    expect(await validateProjectRecords(project, config)).toEqual([]);
+    record.acceptance_criteria = ['SPEC-001/AC-999'];
+    await writeArtifact(ticket, record, '# Broken reference\n');
+    expect((await validateProjectRecords(project, config)).join(' ')).toContain('unresolved acceptance criterion');
+    record.acceptance_criteria = ['SPEC-001/AC-001']; record.dependencies = ['TICKET-001'];
+    await writeArtifact(ticket, record, '# Self-dependency\n');
+    expect((await validateProjectRecords(project, config)).join(' ')).toContain('Dependency cycle');
+    await cp(ticket, path.join(path.dirname(ticket), 'duplicate.md'));
+    expect((await validateProjectRecords(project, config)).join(' ')).toContain('Duplicate artifact ID');
+  });
+  it('rejects malformed IDs, boolean revisions, duplicate criteria and check IDs', async () => {
+    expect((await ticketCase({ ...passingTicket(), id: 'TICKET-0' })).join(' ')).toContain('invalid stable artifact ID');
+    expect((await ticketCase({ ...passingTicket(), revision: true })).join(' ')).toContain('positive integer');
+    expect((await ticketCase(passingTicket(), taskBody + '\n### AC-001\nDuplicate.\n')).join(' ')).toContain('duplicate criterion IDs');
+    const record = passingTicket(); (record.checks as unknown[]).push(structuredClone((record.checks as unknown[])[0]));
+    expect((await ticketCase(record)).join(' ')).toContain('duplicate check IDs');
+  });
+});
+
+describe('selected host package plans', () => {
+  it.each(Object.keys(hostRoots) as (keyof typeof hostRoots)[])('copies only selected %s integration and shared guidance, twice without rewriting', async (host) => {
+    const project = await tempdir();
+    const files = await prepareHostPackage(root, [host], ['python']);
+    await writeFile(path.join(project, 'AGENTS.md'), 'Handwritten instructions\n');
+    await writeFile(path.join(project, 'app.txt'), 'User application\n');
+    expect(await preflightHostPackage(project, files)).toEqual([]);
+    for (const file of files) { await mkdir(path.dirname(path.join(project, file.path)), { recursive: true }); await writeFile(path.join(project, file.path), file.bytes); }
+    const sample = path.join(project, hostRoots[host], 'sdd-implement/SKILL.md');
+    const timestamp = (await stat(sample, { bigint: true })).mtimeNs;
+    const repeated = await prepareHostPackage(root, [host], ['python']);
+    expect(await preflightHostPackage(project, repeated)).toEqual([]);
+    for (const file of repeated) {
+      const existing = await readFile(path.join(project, file.path));
+      if (!existing.equals(file.bytes)) await writeFile(path.join(project, file.path), file.bytes);
+    }
+    expect((await stat(sample, { bigint: true })).mtimeNs).toBe(timestamp);
+    expect(await readFile(path.join(project, 'AGENTS.md'), 'utf8')).toBe('Handwritten instructions\n');
+    expect(await readFile(path.join(project, 'app.txt'), 'utf8')).toBe('User application\n');
+    for (const skill of skills) expect(await readFile(path.join(project, hostRoots[host], skill, 'SKILL.md'))).toEqual(await readFile(path.join(root, 'skills', skill, 'SKILL.md')));
+    expect(await fileExists(path.join(project, '.sdd/beligent/tickets'))).toBe(false);
+    expect(await fileExists(path.join(project, '.sdd/beligent/guidance/python.md'))).toBe(true);
+    expect(await fileExists(path.join(project, '.sdd/beligent/guidance/nextjs.md'))).toBe(false);
+    expect(files.filter((file) => /skills\/[^/]+\/SKILL.md$/.test(file.path))).toHaveLength(5);
+    for (const file of files.filter((file) => file.path.startsWith('.sdd/beligent/guidance/') && file.path.endsWith('.md'))) expect(await localLinkErrors(path.join(project, file.path), project)).toEqual([]);
+  });
+  it('deduplicates a shared Codex/Copilot root and refuses unreviewed content or unsafe paths', async () => {
+    const project = await tempdir();
+    const files = await prepareHostPackage(root, ['codex', 'github-copilot']);
+    expect(files.filter((file) => file.path.endsWith('/SKILL.md'))).toHaveLength(5);
+    const guide = files.find((file) => file.path.endsWith('guidance/engineering.md'))!;
+    await mkdir(path.dirname(path.join(project, guide.path)), { recursive: true });
+    await writeFile(path.join(project, guide.path), 'Local edited guidance');
+    expect((await preflightHostPackage(project, files)).join(' ')).toContain('reviewed merge');
+    expect(await readFile(path.join(project, guide.path), 'utf8')).toBe('Local edited guidance');
+    expect((await preflightHostPackage(project, [{ path: '../escape', bytes: Buffer.from('x') }])).join(' ')).toContain('Unsafe');
+    const other = await tempdir(); await symlink(other, path.join(project, 'linked'));
+    expect((await preflightHostPackage(project, [{ path: 'linked/guide.md', bytes: Buffer.from('x') }])).join(' ')).toContain('Unsafe');
+  });
+});
+
+describe('runbook fixtures and diagnostics', () => {
+  it('runs direct/tracked/blocked/post-close scenarios and validates the fixture graph', async () => {
+    const example = path.join(root, 'examples/workflow-fixture');
+    const config = JSON.parse(await readFile(path.join(example, '.sdd/beligent/config.json'), 'utf8')) as ProjectConfig;
+    expect(await validateProjectRecords(example, config)).toEqual([]);
+    for (const [ticket, module] of [['TICKET-001', 'app.mjs'], ['TICKET-004', 'before.mjs'], ['TICKET-005', 'audit-regression.mjs']]) {
+      const record = parseFrontmatter(await readFile(path.join(example, config.tickets.paths.tickets, ticket! + '.md'), 'utf8')).data;
+      const bytes = await Promise.all([module!, 'regression.test.mjs', 'app.mjs'].map((file) => readFile(path.join(example, file))));
+      expect(record.implementation).toBe('sha256:' + createHash('sha256').update(Buffer.concat(bytes)).digest('hex'));
+    }
+    const run = spawnSync(process.execPath, ['run-scenarios.mjs'], { cwd: example, encoding: 'utf8' });
+    expect(run.status, run.stdout + run.stderr).toBe(0);
+    expect(run.stdout).toContain('direct fix and tracked implementation: PASS');
+    expect(run.stdout).toContain('post-close audit detects missed original criterion: expected FAIL');
+    const project = await tempdir();
+    await cp(example, project, { recursive: true });
+    await cp(path.join(example, 'cases/invalid-done.md'), path.join(project, config.tickets.paths.tickets, 'TICKET-999.md'));
+    expect((await validateProjectRecords(project, config)).join(' ')).toContain('keep open');
+    const childFile = path.join(project, config.tickets.paths.tickets, 'TICKET-003.md');
+    const child = parseFrontmatter(await readFile(childFile, 'utf8'));
+    await writeArtifact(childFile, { ...child.data, status: 'blocked' }, child.body);
+    expect((await validateProjectRecords(project, config)).join(' ')).toContain('completed child tickets');
+  });
+  it('detects duplicate discovery and legacy setup without changing project files', async () => {
+    const project = await tempdir();
+    await mkdir(path.join(project, '.beligent'), { recursive: true });
+    const legacy = path.join(project, '.beligent/config.json');
+    await writeFile(legacy, '{"schema_version":1}');
+    for (const destination of ['.agents/skills/sdd-implement', '.claude/skills/sdd-implement']) {
+      await mkdir(path.join(project, destination), { recursive: true });
+      await cp(path.join(root, 'skills/sdd-implement/SKILL.md'), path.join(project, destination, 'SKILL.md'));
+    }
+    const run = spawnSync(process.execPath, ['--import', 'tsx', path.join(root, 'src/cli/index.ts'), 'doctor', project], { cwd: root, encoding: 'utf8' });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toContain('legacy .beligent installation detected');
+    expect(run.stderr).toContain('duplicate discovery risk');
+    expect(await readFile(legacy, 'utf8')).toBe('{"schema_version":1}');
+    expect(await fileExists(path.join(project, '.sdd/beligent/config.json'))).toBe(false);
+  });
+  it('resolves safety and records from consumer root with the nested default config', async () => {
+    const project = await tempdir(); const config = await templateConfig();
+    const configFile = path.join(project, '.sdd/beligent/config.json');
+    await mkdir(path.dirname(configFile), { recursive: true });
+    await writeFile(configFile, JSON.stringify(config));
+    const record = passingTicket(); (record.checks as Record<string, unknown>[])[0]!.outcome = 'fail';
+    await writeArtifact(path.join(project, config.tickets.paths.tickets, 'TICKET-001.md'), record, taskBody);
+    const args = ['--import', 'tsx', path.join(root, 'src/cli/index.ts'), 'validate', '--config', configFile];
+    const rejected = spawnSync(process.execPath, args, { cwd: root, encoding: 'utf8' });
+    expect(rejected.status).toBe(1);
+    expect(rejected.stderr).toContain('keep open');
+    const other = await tempdir(); await symlink(other, path.join(project, 'unsafe'));
+    config.artifacts.specifications = 'unsafe/specs';
+    await writeFile(configFile, JSON.stringify(config));
+    const unsafe = spawnSync(process.execPath, args, { cwd: root, encoding: 'utf8' });
+    expect(unsafe.status).toBe(1); expect(unsafe.stderr).toContain('symlink');
+  });
+});

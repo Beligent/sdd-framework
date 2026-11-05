@@ -1,103 +1,83 @@
-# Assistant integration
+# Assistant integration and coverage
 
-Beligent SDD keeps methodology and workflow logic in portable `SKILL.md` files.
-Adapters establish discovery and point to shared project guidance. They do not
-duplicate workflows or make instructions a technical enforcement boundary.
+Beligent keeps workflows in portable skill packages. Project instructions load
+engineering/testing/review references for ordinary requests, even when automatic
+skill matching does not select a skill. Setup renders `{{skills_path}}` to a
+verified installed project path. This is an instruction-based integration;
+loading must be observed in each selected host.
 
-The paths below were checked against official documentation on 2026-10-18.
-Documented discovery, installer layout validation, and a live assistant smoke
-test are separate claims. Live behavior remains pending for any surface not
-actually exercised; record product/version and observations when testing it.
+The paths below reflect repository documentation researched on 2026-10-18.
+They are discovery candidates, not a new certification of current host behavior.
+Preserve personal instructions/skills, inspect host settings and confirm paths
+against the installed product before applying integration changes.
 
-The schema accepts assistant identifiers as portable slugs. Current examples
-include Codex, Claude Code, GitHub Copilot, and Cursor; projects may record
-another compatible assistant without changing the SDD artifact model. The
-external installer and each assistant's own discovery rules determine actual
-installation support.
-
-Real local `skills@1.7.2` copy installations were exercised for Codex, Claude
-Code, and GitHub Copilot separately and together. All six skill directories and
-their resource bytes matched source, and runtime Markdown links stayed within
-each installed skill. Observed locations were `.agents/skills/` for Codex and
-Copilot, and `.claude/skills/` for Claude. A separate default-mode Codex/Claude
-install produced six Claude links to shared project skill copies. These checks
-establish installation layout and resource completeness; they did not launch
-these assistant products or exercise Copilot cloud discovery.
-
-| Assistant/surface | Project instructions | Project skill locations | Explicit invocation |
+| Target surface | Documented project integration | Historical installation evidence | 1.0 live workflow |
 | --- | --- | --- | --- |
-| Codex | Root `AGENTS.md`; applicable nested files refine scope | `.agents/skills/<name>/SKILL.md` | `$skill-name` |
-| Claude Code | `CLAUDE.md` or `.claude/CLAUDE.md`; a thin import can read shared `AGENTS.md` | `.claude/skills/<name>/SKILL.md` | `/skill-name` |
-| Cursor | `AGENTS.md` and supported scoped rules | `.agents/skills/<name>/SKILL.md` or `.cursor/skills/<name>/SKILL.md`, depending on configuration | Invoke the discovered skill in chat |
-| Copilot in VS Code | `.github/copilot-instructions.md` or `AGENTS.md`, subject to selected harness/settings | `.github/skills/`, `.claude/skills/`, `.agents/skills/` | Select `/skill-name` in chat |
-| Copilot CLI | `.github/copilot-instructions.md`, `AGENTS.md`, `CLAUDE.md`, and other documented formats | `.github/skills/`, `.claude/skills/`, `.agents/skills/` | Include `/skill-name` in the prompt |
-| Copilot cloud agent | Committed repository instructions and supported scoped guidance | Committed supported project skill directories | Name the relevant skill in the delegated task; confirm observed loading |
+| Codex in VS Code | `AGENTS.md`, `.agents/skills`, explicit `$skill-name`; prior docs did not split Codex surfaces | 1.0 five-skill local copy install/reinstall; source bytes and protected files checked | Pending |
+| Codex CLI | Same project guidance; structured-output usage examples | Same current local layout; no product launch | Pending |
+| Claude Code in VS Code | `CLAUDE.md` importing `@AGENTS.md`, `.claude/skills`; older docs generic across surfaces | 1.0 five-skill local copy install/reinstall; source bytes and protected files checked | Pending |
+| Claude Code CLI | Same guidance; structured-output usage examples | Same current local layout; no product launch | Pending |
+| Copilot VS Code Agent mode | `.github/copilot-instructions.md` bootstrap; supported skill paths depend on harness/settings | 1.0 five-skill local copy install/reinstall in .agents/skills | Pending |
+| Copilot CLI | Shared project guidance and supported skills; inspect discovered instructions | Same current local layout; no product launch | Pending |
+| Copilot cloud | Committed supported instructions and project skills | None for cloud; local copies do not establish cloud access | Pending |
+| Cursor Agent | AGENTS.md; observed .agents/skills with pinned installer, alternate native paths need review | 1.0 five-skill local copy install/reinstall | Pending |
+| Devin Desktop with Devin Local | New 1.0 target; confirm documented local instructions/skill discovery first | None recorded | Pending |
 
-The framework source folder `skills/` is packaging input, not an automatically
-discovered installation location. The copy-based baseline in
-[installation](installation.md) places skills in assistant locations. Existing
-discovery settings can affect loading. Automatic relevance matching does not
-guarantee a skill will be invoked for every suitable prompt.
+## Evidence boundaries
 
-## Codex
+Current tests copy all five packages, shared guidance and only selected stack
+modules, validate local links, preflight edited/unsafe destinations and repeat
+copies without rewrites. A separate executed smoke used cached external
+skills@1.7.2 for Codex, Claude Code, Copilot, Cursor and a combined Codex/Claude/
+Copilot selection, twice each. Five copies per single agent and ten combined
+copies matched source exactly. Protected instructions, app/config/state/ticket
+bytes and timestamps stayed unchanged. Observed roots were .agents/skills for
+Codex/Copilot/Cursor and .claude/skills for Claude. This proves local installer
+layout/preservation, not native app launch or setup workflow execution.
+A portable assistant slug in configuration likewise does not prove installation.
+No host workflow was live-tested as part of the 1.0 implementation.
 
-Use `AGENTS.md` as shared project instructions and `.agents/skills` for project
-skills. Personal skill locations and configured skill lists are outside the
-project installation; preserve them. Explicit `$init-project`, `$adopt-project`,
-or another installed skill name lets a smoke test establish actual use.
-See the official [Agent Skills guide](https://learn.chatgpt.com/docs/build-skills)
-and [AGENTS.md guidance](https://learn.chatgpt.com/docs/agent-configuration/agents-md).
+## Fresh-session validation procedure
 
-## Claude Code
+For each surface above, record product/version, OS, date, source commit, installer
+version, installed paths, discovery settings and actual observations. Use a
+disposable repository and the full five-skill set.
 
-The default thin adapter at root `CLAUDE.md` imports `@AGENTS.md`. If adoption
-uses an existing `.claude/CLAUDE.md`, the relative import is `@../AGENTS.md`.
-Preserve existing Claude guidance and reuse an equivalent import when present.
-An ordinary sentence asking Claude to read a file does not provide the same
-loading guarantee as a supported import.
+1. Run the pinned external installer in copy mode. Compare resource bytes with
+   source, validate runtime links and inspect provenance. Reinstall from a reviewed
+   changed source and confirm only skills/installer provenance change.
+2. Start a fresh host session and invoke `sdd-init`. Inspect the read-only proposal,
+   authorize exact setup, check rendered engineering paths and ownership hashes,
+   repeat and compare bytes/timestamps. Test adoption separately with handwritten
+   instructions, existing config/artifacts and an edited managed section.
+3. Ask for a small code change without naming a skill or ticket. Confirm the host
+   actually reads engineering/testing/review guidance, adds a useful behavioral
+   test where relevant, runs checks and reports evidence. Confirm no SDD ticket,
+   report, approval record or ticket directory appears. Repeat without config.
+4. Explicitly request tracking, then implement the named task. Confirm stable IDs,
+   bounded definition/planning, provider conflict checks, real test execution,
+   manual-validation handling and no premature `done`.
+5. Exercise `sdd-audit` independently for review and diagnosis without a ticket.
+   Check observations/hypotheses and scoped recommendations. Test the repeated-fix
+   safeguard without pretending test failures establish human acceptance.
+6. Request delivery in a disposable Git repository/remote. Check exact staging,
+   unrelated index preservation, push confirmation, policy conflicts and observed
+   completion. No merge without separate explicit authorization. Tracked `done`
+   requires current passing criterion checks independently of delivery. Failed
+   required checks leave work open. A post-close audit is read-only unless record
+   updates are explicitly authorized.
 
-Direct `AGENTS.md` loading is documented from Claude Code v2.1.277, normally only
-when no project `CLAUDE.md` or `CLAUDE.local.md` exists in the working directory
-or its ancestors. Older sessions and some configurations need the import; do not
-assume every version discovers the same files. Personal `~/.claude/skills`
-installations do not establish cloud availability; committed project skills do.
-These differences are documented in [Claude instruction loading](https://code.claude.com/docs/en/memory)
-and [Claude skills](https://code.claude.com/docs/en/skills).
+For cloud, commit the intended resources and inspect the delegated run's loading
+and results separately. For Devin Desktop with Devin Local, first establish its
+actual local discovery mechanism; do not invent a path or equate Desktop and
+Local availability. Mark unavailable surfaces pending with the precise blocker.
 
-## GitHub Copilot
+## Optional native specialists
 
-Keep a short `.github/copilot-instructions.md` bootstrap when needed, linking
-shared `AGENTS.md` and project config. Copilot CLI documents immediate `@path`
-inclusion, but VS Code documentation recommends Markdown references. The baseline
-adapter uses Markdown and asks Copilot to read the shared files; verify that
-behavior in the intended surface instead of claiming identical import semantics.
-
-VS Code behavior depends on the selected harness and settings. Copilot CLI's
-`/instructions` command reports discovered instruction files. GitHub's current
-skills documentation includes VS Code, CLI, cloud agent, and other surfaces; this
-framework's initial target matrix is limited to those listed above. Local
-installation cannot demonstrate that cloud agent received skills or instructions;
-commit the intended project resources, delegate a representative task, and
-inspect its results separately.
-
-Official references: [Copilot skills](https://docs.github.com/en/copilot/concepts/agents/about-agent-skills),
-[VS Code skills](https://code.visualstudio.com/docs/agent-customization/agent-skills),
-[VS Code instructions](https://code.visualstudio.com/docs/agent-customization/custom-instructions),
-[CLI instructions](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-custom-instructions),
-and [CLI skills](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-skills).
-
-Cursor and other Agent Skills-compatible tools can use the same portable skill
-packages when their configured discovery paths support them. Only Codex, Claude
-Code, and Copilot installation layouts have been exercised in this repository;
-confirm the target agent's documented paths and run a fresh-session smoke test.
-
-## Representative smoke test
-
-Use a disposable target and one selected assistant. Install copied skills, open a
-fresh session, invoke `init-project`, inspect the reviewed proposal, authorize
-setup, and verify the config/instruction result. Repeat setup and compare bytes.
-Then invoke `define-work` against the configured overview and ask for a draft
-ticket: confirm the selected profile and artifact paths were read without
-claiming implementation approval. Test adoption separately with existing
-instructions, specifications, and a backlog. Record actual results and leave
-unavailable surfaces pending.
+Default to the main assistant. Where the selected host supports configured native
+specialists, an optional React accessibility or Python API reviewer receives a
+bounded diff, relevant criteria, .sdd/beligent/guidance and expected evidence.
+Use that host's documented configuration/UI; no portable specialist manifest or
+unverified invocation flag is generated. Confirm availability/settings before
+claiming execution. Reviews return findings and actual checks without edits by
+default; recommendations never supply implementation or Git authorization.

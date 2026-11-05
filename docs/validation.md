@@ -39,10 +39,10 @@ npm run check:version
 npm run validate:package
 ```
 
-Framework validation checks nine skill entrypoints, metadata, required templates,
+Framework validation checks five skill entrypoints, metadata, required templates,
 local Markdown links, package-manifest byte consistency, config templates, and
-the worked example's artifact graph. Package validation builds the CLI, verifies
-that `VERSION` agrees with `package.json`, and checks the `npm pack --dry-run`
+the worked example's artifact graph. Version validation checks `package.json` against both lockfile version entries.
+Package validation builds the CLI and checks the `npm pack --dry-run`
 file list against the publishing allowlist. It does not publish.
 
 The npm CLI can validate a consumer project from that project's directory:
@@ -52,16 +52,16 @@ npx @beligent/sdd-framework validate
 npx @beligent/sdd-framework doctor
 ```
 
-`validate` checks schema-1 or schema-2 `.beligent/config.json`, duplicate JSON keys,
-safe paths, filesystem links, required profile gates, and output collisions.
+`validate` checks the unversioned default `.sdd/beligent/config.json`, duplicate JSON keys,
+safe paths, filesystem links, output collisions, record IDs/links/dependencies and
+structured criterion-check coverage, outcomes, revision and snapshot at closure.
 It is read-only. `doctor` reports config status, configured artifact paths, and
 whether core skills exist in known project locations. Missing skill copies are
 warnings because installations vary by agent; malformed or missing config is an
 error. These commands do not initialize, adopt, migrate, or modify a project.
 
 The configuration schema is in `schema/config.schema.json`. TypeScript checks
-filesystem conditions that JSON Schema cannot express. Unknown config versions
-require a separate migration proposal; validation never upgrades them.
+filesystem conditions that JSON Schema cannot express. Earlier configurations are rejected, never converted or rewritten.
 
 ## Test boundaries
 
@@ -72,7 +72,19 @@ claims tied to evidence and test assistant discovery separately in a disposable
 project.
 
 The external `skills@1.7.2` installer has been exercised locally for Codex,
-Claude Code, and GitHub Copilot. Those checks establish installation layout and
-resource completeness, not live assistant behavior. See the
-[validation report](validation-report.md) for earlier installation evidence and
-remaining limits.
+Claude Code, GitHub Copilot, and Cursor. Those checks establish installation layout and
+resource completeness, not live assistant behavior.
+
+## Runnable scenarios and installation smoke
+
+Run node examples/workflow-fixture/run-scenarios.mjs for real regression and
+post-close reproductions. Maintainer tests invoke this node:test fixture as a
+subprocess and validate its structured record graph and invalid closure case.
+Vitest collects only tests/; the fixture is not a Vitest module.
+
+Run node scripts/smoke-installer.mjs /path/to/skills-1.7.2/bin/cli.mjs with an
+available pinned installer. It uses disposable projects, installs twice, compares
+all five packages and protects existing app/instruction/config/state/ticket bytes
+and timestamps. A separate host-package plan test checks selected shared guidance,
+stack modules, idempotency, conflicts and unsafe paths. Neither test launches a
+host application or proves native instruction loading.

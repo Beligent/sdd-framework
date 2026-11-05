@@ -1,0 +1,16 @@
+{
+  "generated": true,
+  "resources": {
+    "assets/guidance/engineering.md": "skills/sdd-implement/references/implementation.md",
+    "assets/guidance/fastapi.md": "skills/sdd-implement/references/technology/fastapi.md",
+    "assets/guidance/nextjs.md": "skills/sdd-implement/references/technology/nextjs.md",
+    "assets/guidance/nodejs.md": "skills/sdd-implement/references/technology/nodejs.md",
+    "assets/guidance/python.md": "skills/sdd-implement/references/technology/python.md",
+    "assets/guidance/react-typescript.md": "skills/sdd-implement/references/technology/react-typescript.md",
+    "assets/guidance/review.md": "skills/sdd-audit/references/review.md",
+    "assets/guidance/shared/diagnosis-and-simplicity.md": "skills/sdd-audit/references/shared/diagnosis-and-simplicity.md",
+    "assets/guidance/shared/governance.md": "skills/sdd-define/references/shared/governance.md",
+    "assets/guidance/testing.md": "skills/sdd-implement/references/testing.md",
+    "references/shared/governance.md": "skills/sdd-define/references/shared/governance.md"
+  }
+}

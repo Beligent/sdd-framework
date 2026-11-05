@@ -1,0 +1,8 @@
+{
+  "generated": true,
+  "resources": {
+    "references/shared/governance.md": "skills/sdd-define/references/shared/governance.md",
+    "references/ticket-management/contract.md": "skills/sdd-define/references/ticket-management/contract.md",
+    "references/ticket-management/markdown.md": "skills/sdd-define/references/ticket-management/markdown.md"
+  }
+}

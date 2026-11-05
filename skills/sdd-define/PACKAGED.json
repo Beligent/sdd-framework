@@ -1,0 +1,11 @@
+{
+  "generated": true,
+  "resources": {
+    "references/shared/diagnosis-and-simplicity.md": "skills/sdd-audit/references/shared/diagnosis-and-simplicity.md",
+    "references/technology/fastapi.md": "skills/sdd-implement/references/technology/fastapi.md",
+    "references/technology/nextjs.md": "skills/sdd-implement/references/technology/nextjs.md",
+    "references/technology/nodejs.md": "skills/sdd-implement/references/technology/nodejs.md",
+    "references/technology/python.md": "skills/sdd-implement/references/technology/python.md",
+    "references/technology/react-typescript.md": "skills/sdd-implement/references/technology/react-typescript.md"
+  }
+}

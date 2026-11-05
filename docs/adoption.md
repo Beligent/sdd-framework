@@ -1,13 +1,13 @@
 # Adopt an existing project
 
-Install `adopt-project` in the target repository as described in
+Install `sdd-init` in the target repository as described in
 [installation](installation.md), then ask the assistant to audit the project and
 prepare an integration proposal. Installing a skill does not authorize changes
 to project configuration.
 
 For example:
 
-> Use adopt-project to examine this existing FastAPI repository. Keep our current
+> Use sdd-init to examine this existing FastAPI repository. Keep our current
 > architecture notes and backlog in their present locations. Propose the missing
 > SDD capabilities and exact configuration/instruction changes before writing.
 
@@ -21,14 +21,14 @@ implied.
 
 The proposal includes:
 
-- The repository root, selected technologies/profile, and complete configuration.
+- The repository root, selected technologies/workflow policy, and complete configuration.
 - Existing artifact locations and instructions to preserve.
 - Every proposed addition or managed-section diff, with current hashes/absence.
 - Conflicts, uncertain instruction precedence, and unsupported settings/schemas.
 - Verification and rollback for only the proposed changes.
 
 The skill presents the proposal in chat while awaiting a real human decision.
-It does not create a report, `.beligent` directory, or configuration in order to
+It does not create a report, `.sdd/beligent` directory, or configuration in order to
 ask for approval. An explicit approval already covering the exact plan is valid;
 there is no duplicate confirmation for the same authorized scope.
 
@@ -42,9 +42,9 @@ findings outside the approved integration remain separate work.
 
 ## Preservation and repeated adoption
 
-`.beligent/config.json` is project-owned after creation. Valid existing settings
+`.sdd/beligent/config.json` is project-owned after creation. Valid existing settings
 remain authoritative. Existing artifacts and instruction text outside managed
-sections stay unchanged. `.beligent/setup-state.json` records only actual
+sections stay unchanged. `.sdd/beligent/setup-state.json` records only actual
 integration ownership and SHA-256 baselines, with no duplicate dependency lock.
 
 An identical repeat with matching baselines performs no writes. Locally edited
@@ -54,8 +54,8 @@ The assistant does not reclaim a section merely because it contains framework
 markers. A valid project-edited config is read without resetting its baseline.
 
 The detailed state contract and path checks are in the canonical
-[setup procedure](../skills/init-project/references/setup.md). To refresh
-instructions, migrate configuration, or update skills later, use the independent
+[setup procedure](../skills/sdd-init/references/setup.md). To refresh
+instructions or update skills later, use the independent
 operations in [maintenance](maintenance.md).
 
 ## Review the adoption result
@@ -69,4 +69,4 @@ does not establish every assistant surface's behavior.
 
 Adoption does not retroactively approve product scope or mark existing tickets
 ready. Map old approval evidence when it exists, retain unanswered questions, and
-use the selected profile for subsequent decisions.
+use the selected workflow and actual project authorization for subsequent decisions.

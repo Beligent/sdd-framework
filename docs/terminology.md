@@ -3,7 +3,7 @@
 | Term | Meaning in Beligent SDD |
 | --- | --- |
 | Methodology | The principles connecting approved behavior, engineering work and evidence |
-| Lifecycle | The adjustable path from discovery to human acceptance, including iteration |
+| Lifecycle | The bounded path from definition through implementation and required checks; delivery is separate |
 | Workflow | An invocable procedure with inputs, outputs, validation and decision points |
 | Agent/assistant | The tool or model performing requested work; no fixed persona is required |
 | Skill | A distributable directory containing `SKILL.md` and needed resources |
@@ -15,7 +15,6 @@
 | Approval | A human decision covering specified artifact revisions and scope |
 | Readiness | Whether a ticket has sufficient planning detail; it is separate from approval |
 | Framework update | Replacement of installed skill resources and installer provenance |
-| Configuration migration | An approved transformation between project configuration schemas |
 | Integration refresh | An approved change to framework-managed project instruction sections |
 
 A PRD is the product-oriented requirements document. A behavioral specification

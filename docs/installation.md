@@ -23,8 +23,8 @@ npx skills@1.7.2 add beligent/sdd \
 Select the target assistant with `--agent`, for example `claude-code`,
 `github-copilot`, or `cursor`. The installer supports additional agents as its
 catalog evolves. Check [agent integration](agents.md) for documented
-discovery locations and compatibility limits. Install all nine skills with
-`--skill '*'`, or select only `init-project` or `adopt-project` for the initial
+discovery locations and compatibility limits. Install all five skills with
+`--skill '*'`, or select only `sdd-init` for the initial
 setup. Install the remaining skills before using the corresponding workflows.
 
 The source repository keeps `skills/` at its root, the collection layout
@@ -40,18 +40,18 @@ the Git skill collection.
 
 ## Configure a new project
 
-After installation, ask the assistant to run `init-project`:
+After installation, ask the assistant to run `sdd-init`:
 
-> Use init-project here. Identify the project type, assistants, technologies,
-> profile, and artifact paths. Show the setup proposal before applying changes.
+> Use sdd-init here. Identify the project type, assistants, technologies,
+> workflow policy, and artifact paths. Show the setup proposal before applying changes.
 
 The workflow creates project-owned configuration and only approved integration
-files. Review the diff and resulting paths. See [the README setup guide](../README.md#set-up-a-project)
+files. Review the diff and resulting paths. See [the README setup guide](../README.md#install)
 and [adoption](adoption.md) for the respective workflows.
 
 ## Adopt an existing project
 
-Install `adopt-project` (or all nine skills), then ask it to inventory the
+Install `sdd-init` (or all five skills), then ask it to inventory the
 repository and prepare a read-only integration plan. The skill maps existing
 architecture, specifications, tickets, test conventions, and assistant
 instructions, and recommends reuse of suitable files and paths. It must show
@@ -64,9 +64,9 @@ The installed and versioned framework content is under the selected agent's
 skill directory. Project setup may create or update these project-owned items:
 
 ```text
-.beligent/config.json
-.beligent/setup-state.json
-docs/sdd/...
+.sdd/beligent/config.json
+.sdd/beligent/setup-state.json
+.sdd/beligent/...
 AGENTS.md
 CLAUDE.md
 .github/copilot-instructions.md
@@ -87,7 +87,7 @@ npx @beligent/sdd-framework validate
 npx @beligent/sdd-framework doctor
 ```
 
-`validate` checks `.beligent/config.json` and reports errors without changing
+`validate` checks `.sdd/beligent/config.json` and reports errors without changing
 files. `doctor` diagnoses config validity, expected artifact paths, and core
 skill discovery. It can also inspect another project directory:
 
@@ -103,7 +103,35 @@ consumer use.
 ## Verify discovery
 
 Start a fresh session in the target assistant, explicitly invoke the installed
-`init-project` or `adopt-project` skill, and confirm it reads the project. Skill
+`sdd-init` skill, and confirm it reads the project. Skill
 folder installation is testable separately from behavior inside each assistant.
 Record the assistant and version used; mark surfaces that were not exercised as
-untested. See [the assistant matrix](agents.md#representative-smoke-test).
+untested. See [the assistant matrix](agents.md#fresh-session-validation-procedure).
+
+## Engineering without tracking
+
+Setup installs shared engineering/testing/review and selected stack assets under
+.sdd/beligent/guidance and links them from shared project instructions. Check those paths after installation and in a fresh host
+session. An ordinary code request must use these standards without creating a
+ticket. Tracking defaults to opt-in; setup creates no ticket directories unless
+tracking is selected. Install all five skills so bootstrap references resolve.
+
+There is no backward compatibility. Earlier configurations, skill names and
+instruction fragments are not supported or converted; set the project up afresh.
+
+## Selected host plans and duplicate discovery
+
+The read-only maintainer helper src/packaging/hosts.ts prepares exact selected-host
+copies and common guidance assets, deduplicating shared roots. It never applies
+consumer changes. sdd-init performs the reviewed file operations using its own
+packaged guidance assets and the external installer/native copy locations.
+
+Check all discovery roots for duplicate skill names before applying. `sdd doctor`
+warns about duplicates and legacy .beligent installs without editing them. Do not
+automatically remove other-host/personal copies. Validate native invocation flags
+before using them; explicit tracking guards apply even on implicit skill loading.
+
+Run `node scripts/smoke-installer.mjs /path/to/skills-1.7.2/bin/cli.mjs` to exercise
+two real local copy installations per selected agent in disposable projects. The
+script checks all resource bytes and protected consumer bytes/timestamps. It does
+not launch agent products or prove fresh-session instruction loading.

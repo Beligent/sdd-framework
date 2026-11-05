@@ -1,112 +1,71 @@
 # Architecture
 
-Beligent SDD separates product decisions from engineering execution. It borrows
-durable artifacts and adjustable process depth from
-[Spec Kit](https://github.com/github/spec-kit) and
-[BMAD](https://github.com/bmad-code-org/BMAD-METHOD), using the
-[Agent Skills standard](https://agentskills.io/specification) for portable
-procedures rather than importing their runtime or persona systems.
+Beligent is a portable Markdown engineering framework with optional tracking.
+Release 1.0.0 follows the implementation runbook with one unversioned configuration;
+see the [default contract decision](decisions/001-default-contract.md).
 
-| Layer | Canonical resources | Responsibility |
-| --- | --- | --- |
-| Management | `define-work` workflows, templates and provider contract | Define what/why and manage requirements, behavior, epics and tickets |
-| Engineering | `plan-work`, `implement-ticket`, `verify-work`, `develop-task`, `diagnose`, `deliver-work` | Plan, implement, review, verify and deliver approved behavior; orchestrate one current task; investigate root causes |
-| Technology | `implement-ticket/references/technology/` | Select only relevant stack guidance |
-| Integration | Setup assets and assistant discovery documentation | Load shared instructions and portable skills |
+| Skill | Responsibility |
+| --- | --- |
+| sdd-init | Inspect/install selected host integrations through a reviewed setup/adoption proposal |
+| sdd-define | Define behavior, standalone tickets, shared specs, optional epics and useful planning |
+| sdd-implement | Implement, add/update useful tests, verify every criterion and record completion |
+| sdd-audit | Read-only review, verification, diagnosis or status before/after closure |
+| sdd-deliver | Independently authorized scoped Git delivery |
 
-Setup is handled by `init-project` and `adopt-project`, bringing the core total
-to nine skills. Within management, `requirements`, `specification`, `epics` and
-`tickets` are direct workflow selectors, each with its own inputs and outputs.
-No full lifecycle run is required to invoke one.
+## Project layout and default guidance
 
-```mermaid
-flowchart LR
-  R[Requirements] --> S[Behavioral specification]
-  S --> T[Preliminary epics and tickets]
-  T <--> P[Architecture and technical planning]
-  P --> A[Implementation approval]
-  A --> I[Implementation and tests]
-  I --> V[Review and verification]
-  V --> H[Human completion decision]
-  V -. findings .-> R
-```
+`.sdd/beligent/config.json` holds settings. `.sdd/beligent/guidance/` holds installed
+general/testing/review and selected stack guidance, linked by AGENTS.md and native
+bridges so ordinary requests inherit standards without invoking a workflow skill.
+Tickets, epics and specs are on-demand paths. No frameworks.json is used.
+One main assistant is default; optional native specialists use bounded assignments,
+relevant criteria/evidence expectations and the same local/project/stack guidance.
 
-This is a common path, not a mandatory sequence. Preliminary tickets may start
-before detailed specifications or architecture. Planning refines them through
-the same provider contract. Engineering links to management artifacts instead
-of maintaining another requirements copy.
+Config includes project, assistants, technologies, workflow, testing, Git, tracking,
+artifact paths and ticket paths. Legacy profiles/mandatory completion gates are
+removed. Tracking is opt-in; readonly ticket mentions or audits never authorize
+implementation or record writes. Surface project-wide tracking policy before edits.
+Missing config does not block ordinary authorized code work.
 
-For schema 2, ordinary work follows a bounded manual composition:
+## Records, evidence and lifecycle
 
-```text
-define-work → plan-work when useful → implement-ticket → verify-work
-```
+Records use stable IDs and positive integer scope revisions. A standalone ticket
+can hold local criteria; linked specs provide canonical behavior spanning tickets.
+Epics are optional. `checks` maps criteria to command/procedure, actual outcome,
+required flag, ticket revision and implementation snapshot. Every required check
+must pass and every criterion must be covered by current required evidence before
+done. Stale, unrun, blocked or failed required checks keep work open.
 
-The [current-task lifecycle](../skills/define-work/references/shared/current-task-lifecycle.md)
-defines shared routing, context inheritance, depth expansion, drift handling,
-and verification selection. It is authored once and packaged into the four
-lifecycle skills. Schema 1 retains the expanded profile-based behavior above.
-Project and epic planning remain available through explicit planning modes; an
-ordinary task does not imply either.
+Completion is independent of audit, human acceptance and Git delivery. Honor
+actual project-specific scope authorization; do not invent universal extra gates.
+Audit is read-only by default and may recommend reopening for missed original
+criteria. Authorized reopening preserves old evidence/history and requires fresh
+checks. Newly requested scope is separate work. Delivery uses its own states,
+permissions and `git.delivery_complete_at`; an open PR never establishes a merge.
 
-`develop-task` is a thin orchestration entry point over this same contract. It
-selects one task, short-circuits satisfied phases, coordinates task planning only
-when useful, implements and verifies, then stops ready for later delivery. It
-does not replace the independently invocable lifecycle skills or perform Git
-delivery.
+## Packaging, setup and ownership
 
-`diagnose` is independently invocable and supplies the canonical
-[diagnosis and simplicity contract](../skills/diagnose/references/shared/diagnosis-and-simplicity.md)
-used by lifecycle skills for repeated-fix, root-cause, feature-drift, and
-process-proportionality behavior. It recommends the smallest supported
-correction but does not silently implement it or broaden design depth.
+Canonical resources are registered in `src/packaging/sync-assets.ts`. Generated
+PACKAGED.json files identify exact shared-source copies. Each skill is standalone;
+sdd-init carries packaged guidance assets for consumer installation. Read-only
+`src/packaging/hosts.ts` prepares selected-host file plans and preflights unsafe or
+locally modified destinations; it does not apply consumer setup. The external
+pinned skills installer or reviewed exact file copies install native packages.
+The assistant executes the Markdown setup procedure with ordinary file tools.
 
-`deliver-work` is independently invocable after verified work. It applies the
-configured Git policy to one bounded change, records commit/push/PR evidence,
-and stops at the configured repository delivery point. This keeps repository
-and remote mutations outside `develop-task`.
+Only selected host bridges/copies and common guidance are proposed. Inspect duplicate
+skill discovery, old .beligent/docs/sdd installations, current bytes/ownership and
+handwritten instructions before writes. Review clean-break conversion separately;
+never silently overwrite legacy/local content. Identical setup is a byte/timestamp
+no-op. The consumer owns .sdd/beligent, instructions and artifacts. Setup-state and
+usage retain independent format markers; installer provenance stays in its lock.
 
-## Framework and project ownership
+## Tooling and limits
 
-Reusable instructions, workflows, templates, guidelines and adapters are versioned
-in this repository and installed as skills. The consumer project owns its
-`.beligent/config.json`, integration records and management artifacts. Project
-overrides live outside installed skills. See the
-[configuration template](../skills/init-project/assets/config.json).
-
-The framework release version and configuration schema version are independent.
-The installer lock records installed-source provenance. Setup state records only
-integration ownership and baselines. [Maintenance](maintenance.md) separates
-skill updates, configuration migrations and instruction refreshes.
-
-## Ticket storage boundary
-
-The [provider contract](../skills/define-work/references/ticket-management/contract.md)
-defines normalized records and semantic operations. The
-[Markdown provider](../skills/define-work/references/ticket-management/markdown.md)
-maps them to files. Workflow logic does not depend on those file headings or
-locations. A future tracker provider supplies mapping and conflict semantics;
-it does not require rewriting product workflows. The MVP has no remote provider,
-runtime plugin system or synchronization service.
-
-## Portable packaging
-
-Each installed skill contains its runtime references. A small TypeScript
-maintainer helper copies explicitly shared resources from one canonical source.
-Generated `PACKAGED.json` manifests identify that source; edit the canonical
-file and synchronize, never the copy. Consumers need no build step. Repository
-validation rejects drift and escaping skill references.
-
-The optional `sdd` TypeScript CLI provides read-only consumer configuration
-validation and diagnostics. JSON Schema describes the stable config shape;
-filesystem checks add containment, link, and path-collision validation. The CLI
-does not implement setup or adoption workflows. The same TypeScript toolchain
-also validates the framework and packages shared assets for maintainers.
-
-Technology guides have one authoring location under `implement-ticket`. Planning
-receives packaged copies of the same guides because it must work independently
-after installation. It loads only the modules selected by the project.
-
-Human gates are instruction-based working agreements; they are not a technical
-security system enforced uniformly across assistants. Actual discovery and
-smoke-test evidence is reported in [validation](validation.md).
+The optional CLI validates configuration and tracked records, diagnoses missing/
+duplicate discovery and legacy config, and imports explicit local numeric usage.
+YAML is a runtime dependency only for record validation; no Python is needed.
+There is no hosted telemetry, ticket service or agent-specific workflow engine.
+Digest conflict checks are observed-change protection, not transactional CAS.
+Structural validation checks declared evidence, never proves test truth or consent.
+See [host evidence](agents.md) and [validation](validation.md).

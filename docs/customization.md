@@ -1,84 +1,34 @@
-# Customization
+# Customize project policy
 
-Edit the consumer project's `.beligent/config.json` to select its profile,
-assistant(s), technologies, artifact paths and Markdown ticket locations. New
-projects start from the [schema-2 template](../skills/init-project/assets/config.json).
-Paths are relative to the project root and must resolve inside it. Validate a
-configuration with `npx @beligent/sdd-framework validate`; this read-only check
-does not modify the project.
+Use the [default configuration](../skills/sdd-init/assets/config.json) and
+`schema/config.schema.json`. The configuration has no version field. Unknown
+keys and old versioned configurations are rejected; review conversions explicitly.
+Keep reviewed local/project guidance in .sdd/beligent/guidance/ and refresh it
+with ownership/conflict checks; do not edit installed skill copies for project preferences.
 
-Reuse existing documentation/backlog locations during adoption. Record
-project-specific coding conventions under the configured conventions location
-and point to them from project instructions. Never put project overrides in
-installed skill files: a skill update can replace them. Assistant identifiers
-are lowercase slugs; Codex, Claude Code, Copilot, Cursor, and other
-Agent Skills-compatible tools can be recorded without changing artifact rules.
+`tracking.mode: opt-in` keeps ordinary work in chat. Explicit tracking, implementing a named
+task or a durable artifact request selects persistence for that scope. Set
+`always` only by reviewed project choice. Paths remain lazy destinations.
 
-Validate a project with the optional Node.js CLI, which does not write files:
+`workflow.rigor` is light, standard or rigorous; `workflow.design_depth` is
+current-task, near-term or comprehensive. `ask_before_expansion` gates
+consequential deeper design. Rigor never implies planning every future task.
+Rigor changes review depth without requiring unrelated artifacts or universal
+completion approval gates. Tickets may stand alone at any selected rigor.
 
-```sh
-npx @beligent/sdd-framework validate
-```
+Testing categories use always/when-relevant/never and specialized values in the
+schema. Apply conditions literally to changed behavior/risk. Useful tests and
+actual check execution belong inside implementation. No policy can turn an
+unrun check into a pass; report unavailable infrastructure explicitly.
 
-## Workflow policy
+Git policy selects branch strategy, commit permission/style, push/PR behavior,
+review and delivery completion point. It applies only within actual authorization and
+safe repository state. Observed delivery is independent of ticket done.
 
-Schema 2 separates workflow rigor from design-ahead depth. `workflow.rigor` is
-`light`, `standard`, or `rigorous`; `workflow.design_depth` is `current-task`,
-`near-term`, or `comprehensive`; `ask_before_expansion` controls whether the
-assistant must ask before expanding beyond the selected depth. New projects use
-`standard`, `current-task`, and `true`.
+Assistants use portable slugs, including additional tools when compatible; a slug
+does not establish tested discovery. Technology modules cover React/TypeScript,
+Next.js, Node.js, Python and FastAPI and load only when relevant. Project
+conventions override generic stack advice.
 
-Schema 2 applies rigor and design depth to task readiness. Light and standard
-current-task work can use a compact task when it meets the stop rule, without
-separate requirement, specification, or plan artifacts. Rigorous work retains
-stronger current-task governance. Existing expanded artifacts remain valid and
-should be reused when sufficient. `ask_before_expansion: true` requires the
-assistant to ask before producing design beyond the selected depth. Keep testing
-and delivery preferences in project configuration rather than task records.
-
-`testing` states project preferences for lint, typecheck, unit, integration,
-E2E, accessibility, security, performance, TDD, and manual validation. `git`
-states branch strategy, conventional commits, commit permission, push policy,
-PR policy, review timing, and the delivery point that completes a task. These
-fields guide `deliver-work` after verified work reaches `ready-for-delivery`.
-The skill performs only actions allowed by project policy, repository state,
-host authorization, and the delivery safety contract.
-
-Profiles define required artifact kinds and decisions. Reduce paperwork by
-putting a lightweight contract, plan and evidence in a ticket. Add project-specific
-profiles by explicit configuration; preserve implementation and completion
-approval. For a substantial lifecycle variation, document its entry conditions,
-outputs, checks and gates in project conventions and reference them from
-`AGENTS.md`.
-
-## Technology modules
-
-The canonical modules are:
-
-- [React and TypeScript](../skills/implement-ticket/references/technology/react-typescript.md)
-- [Next.js](../skills/implement-ticket/references/technology/nextjs.md)
-- [Node.js](../skills/implement-ticket/references/technology/nodejs.md)
-- [Python](../skills/implement-ticket/references/technology/python.md)
-- [FastAPI](../skills/implement-ticket/references/technology/fastapi.md)
-
-Combine applicable modules; for example, Next.js may use React/TypeScript and
-Node guidance, while FastAPI also uses Python guidance. Installed project
-versions and existing conventions decide the applicable APIs. No module selects
-a database, ORM, state library, test runner or hosting platform for the project.
-
-To add framework-level guidance, author one module in that canonical directory,
-register its slug in configuration validation and the packaging map, and add
-only consumers that genuinely need it. Run packaging and validation. For a
-single-project convention, use the project's conventions directory instead.
-
-## Workflow and provider extensions
-
-Keep nine entry skills. Add focused management routes below `define-work` with
-their own input/output contracts, and update the route table. Reuse normalized
-ticket operations rather than embedding storage code in a route. A new provider
-implements the [contract](../skills/define-work/references/ticket-management/contract.md),
-documents native field/status mapping, tests identity/conflict semantics and
-declares supported capabilities. Do not dual-write authoritative records.
-
-Assistant-specific behavior belongs in setup fragments or discovery docs.
-Avoid tool names and host-specific commands in canonical workflow logic.
+Keep exactly five public skills. Add focused routes/resources inside their
+packages, retain canonical shared-resource ownership, and synchronize copies.

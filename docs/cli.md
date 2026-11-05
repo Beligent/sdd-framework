@@ -1,11 +1,7 @@
 # Optional Beligent CLI
 
 The npm package provides optional diagnostics around the Markdown framework. It
-does not install Agent Skills or initialize/adopt a project. Configuration
-migration defaults to a read-only preview and requires explicit confirmation to
-write; other workflows remain in the skills and the external `skills` installer.
-
-Node.js 22 or later is required. From a configured project, run:
+does not install Agent Skills or initialize/adopt a project. Node.js 22 or later is required. From a configured project, run:
 
 ```sh
 npx @beligent/sdd-framework validate
@@ -14,38 +10,27 @@ npx @beligent/sdd-framework usage report
 npx @beligent/sdd-framework version
 ```
 
-`validate` checks `.beligent/config.json`; to select another config file, use:
+`validate` checks `.sdd/beligent/config.json`; to select another config file, use:
 
 ```sh
 npx @beligent/sdd-framework validate --config path/to/config.json
 ```
 
-It checks JSON syntax and duplicate keys, schema versions 1 and 2, required fields,
-known profile gates, project-relative paths, symlink/hardlink safety, and
-overlapping output locations. It prints human-readable errors and exits nonzero
-for invalid or unreadable configuration. Validation is read-only. Unknown
-configuration schemas require a separate migration proposal. Schema-1 projects
-remain unchanged; preview their explicit schema-2 migration with:
-
-```sh
-npx @beligent/sdd-framework migrate-config
-npx @beligent/sdd-framework migrate-config --write --confirm
-```
-
-The first command changes nothing. The second prints the same preview, then
-writes only after the explicit flags are supplied. Add
-`--adopt-recommended-workflow` only when the developer chooses schema-2
-`standard + current-task`; otherwise legacy standard maps conservatively to
-`rigorous + current-task`.
+It checks strict JSON, duplicate keys, the single unversioned default shape,
+required fields, safe paths, output collisions, record IDs/links/dependencies and
+structured closure evidence for every criterion. Required failed/blocked/unrun or
+stale checks reject done; delivery and human approval are not universal gates.
+`validate` is read-only. Old versioned configurations are rejected with a reviewed
+conversion message. There is no migration command or legacy compatibility mode.
 
 `doctor` accepts an optional project path. It reports configuration status,
 configured artifact paths that have not been created yet, and whether core
-skills are discoverable in common project locations. Missing skill copies are
+skills are discoverable (including duplicate-root warnings) in common project locations. Missing skill copies are
 warnings because assistant discovery varies. Missing or invalid configuration
 is an error. A warning-only report exits successfully.
 
 `version` prints the CLI/framework version. `package.json` is authoritative;
-the repository check ensures it matches `VERSION`.
+the repository check ensures the lockfile agrees with it. No separate `VERSION` file is used.
 
 ## Token usage by skill
 
@@ -57,12 +42,12 @@ streaming JSON; it stores numeric usage, agent, skill, optional task, timestamp,
 and a deduplication hash, never prompts, responses, file contents, or tool output.
 
 ```sh
-codex exec --json 'Use develop-task for TICKET-012.' > /tmp/develop-task.jsonl
+codex exec --json 'Use sdd-implement for TICKET-012.' > /tmp/sdd-implement.jsonl
 npx @beligent/sdd-framework usage footer \
-  --agent codex --skill develop-task --file /tmp/develop-task.jsonl
+  --agent codex --skill sdd-implement --file /tmp/sdd-implement.jsonl
 npx @beligent/sdd-framework usage import \
-  --agent codex --skill develop-task --task TICKET-012 \
-  --file /tmp/develop-task.jsonl
+  --agent codex --skill sdd-implement --task TICKET-012 \
+  --file /tmp/sdd-implement.jsonl
 ```
 
 For Claude Code, capture structured streaming output so multi-turn usage can be
@@ -70,17 +55,17 @@ summed when the final result does not contain an aggregate:
 
 ```sh
 claude -p --output-format stream-json --verbose \
-  'Use develop-task for TICKET-012.' > /tmp/develop-task.jsonl
+  'Use sdd-implement for TICKET-012.' > /tmp/sdd-implement.jsonl
 npx @beligent/sdd-framework usage footer \
-  --agent claude --skill develop-task --file /tmp/develop-task.jsonl
+  --agent claude --skill sdd-implement --file /tmp/sdd-implement.jsonl
 npx @beligent/sdd-framework usage import \
-  --agent claude --skill develop-task --task TICKET-012 \
-  --file /tmp/develop-task.jsonl
+  --agent claude --skill sdd-implement --task TICKET-012 \
+  --file /tmp/sdd-implement.jsonl
 ```
 
-Imports default to `.beligent/usage.jsonl`, reject linked stores, and deduplicate
+Imports default to `.sdd/beligent/usage.jsonl`, reject linked stores, and deduplicate
 the same agent/skill/task/source combination. Treat this as local operational
-data and normally add `.beligent/usage.jsonl` to the consumer project's
+data and normally add `.sdd/beligent/usage.jsonl` to the consumer project's
 `.gitignore`. Display totals grouped by skill:
 
 ```sh

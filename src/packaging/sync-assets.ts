@@ -1,29 +1,31 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
-export const skills = ['init-project', 'adopt-project', 'define-work', 'plan-work', 'implement-ticket', 'verify-work', 'develop-task', 'diagnose', 'deliver-work'];
+export const skills = ['sdd-init', 'sdd-define', 'sdd-implement', 'sdd-audit', 'sdd-deliver'];
 const technologies = ['react-typescript', 'nextjs', 'nodejs', 'python', 'fastapi'];
 export type Mapping = { source: string; destination: string };
 
 export function mappings(): Mapping[] {
   const pairs: Mapping[] = [];
-  const governance = 'skills/define-work/references/shared/governance.md';
-  for (const skill of skills) if (skill !== 'define-work') pairs.push({ source: governance, destination: `skills/${skill}/references/shared/governance.md` });
-  const lifecycle = 'skills/define-work/references/shared/current-task-lifecycle.md';
-  for (const skill of ['plan-work', 'implement-ticket', 'verify-work', 'develop-task']) pairs.push({ source: lifecycle, destination: `skills/${skill}/references/shared/current-task-lifecycle.md` });
-  const diagnosis = 'skills/diagnose/references/shared/diagnosis-and-simplicity.md';
-  for (const skill of ['define-work', 'plan-work', 'implement-ticket', 'verify-work', 'develop-task']) pairs.push({ source: diagnosis, destination: `skills/${skill}/references/shared/diagnosis-and-simplicity.md` });
-  for (const skill of ['plan-work', 'implement-ticket', 'verify-work', 'develop-task', 'deliver-work']) {
-    for (const name of ['contract.md', 'markdown.md']) pairs.push({ source: `skills/define-work/references/ticket-management/${name}`, destination: `skills/${skill}/references/ticket-management/${name}` });
-  }
-  for (const name of ['config.json', 'project-overview.md', 'AGENTS.fragment.md', 'CLAUDE.fragment.md', 'copilot.fragment.md']) pairs.push({ source: `skills/init-project/assets/${name}`, destination: `skills/adopt-project/assets/${name}` });
-  pairs.push({ source: 'skills/init-project/references/setup.md', destination: 'skills/adopt-project/references/setup.md' });
-  for (const name of technologies) for (const skill of ['plan-work', 'develop-task']) pairs.push({ source: `skills/implement-ticket/references/technology/${name}.md`, destination: `skills/${skill}/references/technology/${name}.md` });
-  for (const name of ['implementation.md', 'testing.md']) pairs.push({ source: `skills/implement-ticket/references/${name}`, destination: `skills/develop-task/references/${name}` });
-  pairs.push({ source: 'skills/verify-work/references/review.md', destination: 'skills/develop-task/references/review.md' });
-  pairs.push({ source: 'skills/define-work/assets/compact-task.md', destination: 'skills/develop-task/assets/compact-task.md' });
-  pairs.push({ source: 'skills/plan-work/assets/implementation-plan.md', destination: 'skills/develop-task/assets/implementation-plan.md' });
-  pairs.push({ source: 'skills/verify-work/assets/verification-report.md', destination: 'skills/develop-task/assets/verification-report.md' });
+  const share = (source: string, targets: string[], relative: string): void => {
+    for (const target of targets) pairs.push({ source, destination: `skills/${target}/${relative}` });
+  };
+  share('skills/sdd-define/references/shared/governance.md', skills.filter((skill) => skill !== 'sdd-define'), 'references/shared/governance.md');
+  share('skills/sdd-define/references/shared/current-task-lifecycle.md', ['sdd-implement', 'sdd-audit'], 'references/shared/current-task-lifecycle.md');
+  share('skills/sdd-audit/references/shared/diagnosis-and-simplicity.md', ['sdd-define', 'sdd-implement'], 'references/shared/diagnosis-and-simplicity.md');
+  for (const name of ['contract.md', 'markdown.md']) share(`skills/sdd-define/references/ticket-management/${name}`, ['sdd-implement', 'sdd-audit', 'sdd-deliver'], `references/ticket-management/${name}`);
+  for (const name of technologies) share(`skills/sdd-implement/references/technology/${name}.md`, ['sdd-define'], `references/technology/${name}.md`);
+  share('skills/sdd-implement/references/testing.md', ['sdd-audit'], 'references/testing.md');
+  share('skills/sdd-audit/references/review.md', ['sdd-implement'], 'references/review.md');
+  share('skills/sdd-audit/assets/verification-report.md', ['sdd-implement'], 'assets/verification-report.md');
+  for (const [source, name] of [
+    ['skills/sdd-implement/references/implementation.md', 'engineering.md'],
+    ['skills/sdd-implement/references/testing.md', 'testing.md'],
+    ['skills/sdd-audit/references/review.md', 'review.md'],
+    ['skills/sdd-define/references/shared/governance.md', 'shared/governance.md'],
+    ['skills/sdd-audit/references/shared/diagnosis-and-simplicity.md', 'shared/diagnosis-and-simplicity.md'],
+  ]) share(source!, ['sdd-init'], `assets/guidance/${name}`);
+  for (const name of technologies) share(`skills/sdd-implement/references/technology/${name}.md`, ['sdd-init'], `assets/guidance/${name}.md`);
   return pairs;
 }
 

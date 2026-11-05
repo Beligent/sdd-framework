@@ -1,0 +1,12 @@
+{
+  "generated": true,
+  "resources": {
+    "assets/verification-report.md": "skills/sdd-audit/assets/verification-report.md",
+    "references/review.md": "skills/sdd-audit/references/review.md",
+    "references/shared/current-task-lifecycle.md": "skills/sdd-define/references/shared/current-task-lifecycle.md",
+    "references/shared/diagnosis-and-simplicity.md": "skills/sdd-audit/references/shared/diagnosis-and-simplicity.md",
+    "references/shared/governance.md": "skills/sdd-define/references/shared/governance.md",
+    "references/ticket-management/contract.md": "skills/sdd-define/references/ticket-management/contract.md",
+    "references/ticket-management/markdown.md": "skills/sdd-define/references/ticket-management/markdown.md"
+  }
+}
