@@ -299,6 +299,11 @@ version, date and what you observed.
 | `usage report [--store <path>] [--json]`                                                           | Summarize recorded usage by skill                                                        |
 | `version`                                                                                          | Print the version                                                                        |
 
+You don't need `sdd` installed. The skills run it as `sdd` when it exists,
+otherwise as `npx --no-install sdd` from the project's dependencies, otherwise as
+`npx @beligent/sdd-framework@latest`, which downloads it for that run only. They
+never install it.
+
 Only `install --apply` and `usage import` write files. `validate` and `doctor`
 exit 1 on errors; `doctor` exits 0 when it finds only warnings.
 

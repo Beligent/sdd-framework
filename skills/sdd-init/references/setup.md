@@ -10,9 +10,9 @@ sdd install --host codex --stack nextjs           # dry run: prints the plan
 sdd install --host codex --stack nextjs --apply
 ```
 
-Run `sdd` from the framework package the developer installed from: a packed
-tarball (`npx --package <path-to-tgz> -- sdd …`) or a registry version that
-contains `install` (1.0.0 or later). Ask the developer which when unsure.
+Run `sdd` as described in the [shared contract](shared/governance.md#the-sdd-command),
+without asking. When the developer is testing a packed tarball, use
+`npx --package <path-to-tgz> -- sdd …` instead.
 
 Install, reinstall and upgrade are the same command. Without `--host` or
 `--stack` the installer uses the hosts and stacks in `.sdd/beligent/config.json`.

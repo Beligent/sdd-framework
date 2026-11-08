@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.2
+
+- The skills run the framework CLI without asking where it is installed: `sdd`
+  when it exists, otherwise `npx --no-install sdd` from the project, otherwise
+  `npx @beligent/sdd-framework@latest` for that run only. They never install it.
+
 ## 1.0.1
 
 - Config checks name the files they cover with `paths` instead of
