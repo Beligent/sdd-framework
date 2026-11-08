@@ -20,6 +20,7 @@ The ticket is the only record. `sdd validate` checks every rule marked
 | `schema`, `id`, `title` | yes | Marker, ID matching the file name, nonempty title |
 | `status` | yes | `todo`, `in-progress`, `blocked`, `done`, `cancelled` |
 | `depends_on` | no | Prerequisite ticket IDs; no self-links or cycles. A removed ticket counts as satisfied |
+| `checks_required` | no | Config check ids this ticket must pass: those whose `paths` match the files the work touches. Distinct ids that exist in the config |
 | `blocked_reason` | when blocked | What must happen before the agent can continue |
 | `cancelled_reason` | when cancelled | Why the work was dropped |
 | `checks` | when done | Results of the checks run, see below |
@@ -63,7 +64,8 @@ Record only results that actually happened.
 A ticket may be `done` only when (*validated*):
 
 1. every criterion is covered by a check with outcome `pass`;
-2. every config check with `required: true` has a passing result;
+2. every config check in `checks_required`, and every config check whose
+   `paths` include `**`, has a passing result;
 3. no recorded check is `fail`, `blocked` or `not-run`.
 
 Done and cancelled tickets are final: never reopened or edited. See the

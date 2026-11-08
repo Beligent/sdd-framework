@@ -46,8 +46,9 @@ that mirrors the implementation.
   limitation and a way to finish the check.
 - For a failure, identify whether it is introduced, pre-existing or unresolved.
   Do not disable checks, weaken assertions or hide failures to create a green run.
-- After fixing relevant failures, run the checks appropriate to the final diff.
-  Broaden only when changed scope or unresolved concerns justify it.
+- Iterate with focused tests, then run the ticket's listed checks once on the
+  final diff. Rerun a check only when code it covers changed afterwards. Broaden
+  only when changed scope or unresolved concerns justify it.
 
 ## Record acceptance evidence
 
@@ -56,7 +57,7 @@ was observed and the outcome: `pass`, `fail`, `blocked` or `not-run`. A test
 being written is not a test passing. A concise terminal outcome is enough; sanitize
 logs before storing them.
 
-A ticket is done when every criterion has a passing check, every required config
-check passed and no recorded check is failing. Store results as structured checks
+A ticket is done when every criterion has a passing check, every config check in
+`checks_required` or with `paths: ["**"]` passed and no recorded check is failing. Store results as structured checks
 in the ticket; narrative prose alone is insufficient. Delivery is separate from
 completion, and the developer remains responsible for the feature.

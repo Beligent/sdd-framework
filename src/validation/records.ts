@@ -1,7 +1,7 @@
 import { lstat, readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { parseDocument } from 'yaml';
-import { SDD_ROOT, pathIssue, type ProjectConfig } from './config.js';
+import { SDD_ROOT, coversEverything, pathIssue, type ProjectConfig } from './config.js';
 
 // The ticket is the only record. It describes the subset of work an AI agent does;
 // the developer owns the feature. See README.md.
@@ -15,7 +15,7 @@ export const TICKETS_DIR = `${SDD_ROOT}/tickets`;
 export const RETIRED_DIRS = [`${SDD_ROOT}/epics`, `${SDD_ROOT}/specs`];
 export const statuses = ['todo', 'in-progress', 'blocked', 'done', 'cancelled'];
 export const outcomes = ['pass', 'fail', 'blocked', 'not-run'];
-const ticketFields = ['schema', 'id', 'title', 'status', 'depends_on', 'blocked_reason', 'cancelled_reason', 'checks'];
+const ticketFields = ['schema', 'id', 'title', 'status', 'depends_on', 'checks_required', 'blocked_reason', 'cancelled_reason', 'checks'];
 const checkFields = ['id', 'criteria', 'command', 'procedure', 'observed', 'outcome'];
 const idPattern = /^TICKET-\d{3,}$/;
 const noConversion = 'Recreate it from the current template; there is no automatic conversion.';
@@ -183,6 +183,15 @@ function ticketIssues(record: ParsedRecord, config: ProjectConfig): string[] {
   }
 
   const configured = new Map((config.checks ?? []).map((check) => [check.id, check]));
+  // Config checks this ticket must pass: those it lists, plus any that cover every change.
+  const mandatory = new Set((config.checks ?? []).filter(coversEverything).map((check) => check.id));
+  if (data.checks_required !== undefined) {
+    if (!stringList(data.checks_required) || new Set(data.checks_required).size !== data.checks_required.length) errors.push(`${id}: checks_required must list distinct config check ids`);
+    else for (const listed of data.checks_required) {
+      if (configured.has(listed)) mandatory.add(listed);
+      else errors.push(`${id}: checks_required lists '${listed}', which is not a check in the config`);
+    }
+  }
   const checks: RecordValue[] = [];
   if (data.checks !== undefined) {
     if (!Array.isArray(data.checks)) errors.push(`${id}: checks must be a list`);
@@ -201,7 +210,7 @@ function ticketIssues(record: ParsedRecord, config: ProjectConfig): string[] {
     for (const criterion of criteria.ids) {
       if (!passing.some((check) => stringList(check.criteria) && check.criteria.includes(criterion))) errors.push(`${id}: no passing check covers ${criterion}`);
     }
-    for (const check of config.checks ?? []) if (check.required && !passing.some((result) => result.id === check.id)) errors.push(`${id}: required project check '${check.id}' has no passing result`);
+    for (const check of mandatory) if (!passing.some((result) => result.id === check)) errors.push(`${id}: required project check '${check}' has no passing result`);
   }
   return errors;
 }

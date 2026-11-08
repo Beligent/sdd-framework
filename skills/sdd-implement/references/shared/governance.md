@@ -49,15 +49,19 @@ A ticket lives at `.sdd/beligent/tickets/<ID>.md` and follows the
 [ticket contract](../records.md). Requirements come first: clear requirements,
 testable criteria and explicit exclusions matter more than closure ceremony.
 
+- Checks: a config check covers the files matching its `paths`. A ticket lists
+  in `checks_required` the checks whose `paths` match the files its work
+  touches, so backend work runs backend checks and frontend work runs frontend
+  checks. A check with `paths: ["**"]`, such as a secrets scan, applies to every
+  ticket. A check without `paths` is the developer's to run unless a ticket lists it.
 - Done: the implementing agent sets `done` when the work is implemented, every
-  criterion has a passing check, every required config check passed and no
-  recorded check is failing. Config checks not marked `required` are the
-  developer's concern; the agent need not run or record them. Done means the
-  AI's subset is complete, not that the feature is.
+  criterion has a passing check, every listed check and every `**` check passed,
+  and no recorded check is failing. Done means the AI's subset is complete, not
+  that the feature is.
 - Size: a feature too large for one implementation session becomes several
   tickets, each listing the tickets it builds on in `depends_on`.
 - Blocked: set `blocked` with `blocked_reason` when the agent cannot continue:
-  a required check cannot run, a dependency is open, or a decision belongs to
+  a listed check cannot run, a dependency is open, or a decision belongs to
   the developer. A dependency is open while its ticket exists and is not `done`;
   a cancelled dependency needs the developer's decision. A failing check the
   agent can fix keeps `in-progress`.

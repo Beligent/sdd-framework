@@ -67,11 +67,19 @@
             "type": "string",
             "minLength": 1
           },
-          "required": {
-            "type": "boolean"
+          "paths": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Glob patterns of the files this check covers. A ticket whose work touches a matching path lists the check in checks_required. [\"**\"] matches every change, so every ticket must pass it."
           }
         }
-      }
+      },
+      "description": "Project commands. Without paths a check is never required automatically; the developer runs it or a ticket lists it."
     }
   }
 }

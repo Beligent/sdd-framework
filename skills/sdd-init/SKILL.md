@@ -11,17 +11,20 @@ Read applicable repository instructions, [setup](references/setup.md) and the
 reviewed installation only. It never generates application code, installs
 dependencies, creates tickets or initializes Git.
 
-1. Inventory configuration, installed skills, instruction files, tests and
-   conventions. Report earlier framework installations (`.beligent/`, old skill
-   names, retired guidance files, `epics/` or `specs/` folders); nothing is
-   converted, overwritten or deleted silently.
+1. Inspect the current files only: configuration, installed skills, instruction
+   files, CI and scripts. Do not search Git history. Note earlier framework
+   installations (`.beligent/`, old skill names, retired guidance files, `epics/`
+   or `specs/` folders); nothing is converted, overwritten or deleted silently.
 2. Select hosts and only the stacks the project uses. Propose the project's real
-   test, lint and typecheck commands as config `checks`, marking those every
-   ticket must pass as `required`.
-3. Run the installer dry run from [setup](references/setup.md) and present its
-   plan and the proposed config in chat. For an existing project use
-   [the adoption plan](assets/adoption-plan.md). Name edited managed files the
-   install will replace, conflicts and duplicate skill roots.
+   test, lint and typecheck commands as config `checks`, each with the `paths`
+   it covers, so backend checks apply to backend work and frontend checks to
+   frontend work. Give `paths: ["**"]` only to checks every change must pass,
+   such as a secrets scan. Leave slow or occasional checks, such as a production
+   build, without `paths`; the developer runs them.
+3. Run the installer dry run from [setup](references/setup.md) and present the
+   proposal with [the template](assets/adoption-plan.md): what the install
+   changes, problems, and the proposed checks. Report only changes, problems and
+   decisions; omit anything that is fine.
 4. After the developer approves, apply with `--apply`, then write the approved
    `checks` into the config as an ordinary reviewed edit. Resolve conflicts by
    hand and rerun; never work around them with direct writes.

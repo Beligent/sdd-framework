@@ -90,8 +90,14 @@ describe('configuration', () => {
     expect(validateConfig(minimal)).toEqual([]);
     expect(validateConfig({
       schema: 'beligent-sdd/config', hosts: ['claude-code', 'codex', 'github-copilot', 'cursor'], project: { name: 'DPP' },
-      stacks: ['nextjs', 'react-typescript'], checks: [{ id: 'unit', command: 'npm test', required: true }, { id: 'e2e', command: 'npm run e2e' }],
+      stacks: ['nextjs', 'react-typescript'], checks: [{ id: 'unit', command: 'npm test', paths: ['app/**'] }, { id: 'e2e', command: 'npm run e2e' }],
     })).toEqual([]);
+  });
+
+  it('rejects the removed required flag and explains its replacement', () => {
+    const issues = validateConfig({ ...minimal, checks: [{ id: 'unit', command: 'npm test', required: true }] });
+    expect(issues).toEqual([expect.objectContaining({ path: '/checks/0/required', message: expect.stringContaining('Replace it with "paths"') as string })]);
+    expect(validateConfig({ ...minimal, checks: [{ id: 'unit', command: 'npm test', paths: [] }] })).not.toEqual([]);
   });
 
   it.each([
@@ -217,13 +223,21 @@ describe('tickets', () => {
     expect(await errorsFor([file(done({}, [passing({ criteria: ['TICKET-001/AC-001'] })]))])).toContain("references TICKET-001/AC-001, which is not one of this ticket's criteria");
   });
 
-  it('requires configured required checks to pass and record their configured command', async () => {
-    const config: ProjectConfig = { ...minimal, checks: [{ id: 'unit', command: 'npm test', required: true }, { id: 'e2e', command: 'npm run e2e' }] };
-    expect(await errorsFor([file(done())], config)).toContain("required project check 'unit' has no passing result");
+  it('requires the listed and everywhere checks to pass and record their configured command', async () => {
+    const config: ProjectConfig = { ...minimal, checks: [
+      { id: 'unit', command: 'npm test', paths: ['app/**'] }, { id: 'e2e', command: 'npm run e2e' }, { id: 'secrets', command: 'gitleaks detect', paths: ['**'] },
+    ] };
     const unit = { id: 'unit', command: 'npm test', outcome: 'pass' };
-    expect(await errorsFor([file(done({}, [passing(), unit]))], config)).toBe('');
-    expect(await errorsFor([file(done({}, [passing(), { ...unit, command: 'true' }]))], config)).toContain("must record the configured command 'npm test'");
-    expect(await errorsFor([file(done({}, [passing(), { ...unit, id: 'lint' }]))], config)).toContain("check 'lint' needs criteria or must match a configured check id");
+    const secrets = { id: 'secrets', command: 'gitleaks detect', outcome: 'pass' };
+    expect(await errorsFor([file(done())], config)).toContain("required project check 'secrets' has no passing result");
+    expect(await errorsFor([file(done({}, [passing(), secrets]))], config)).toBe('');
+    expect(await errorsFor([file(done({ checks_required: ['unit'] }, [passing(), secrets]))], config)).toContain("required project check 'unit' has no passing result");
+    expect(await errorsFor([file(done({ checks_required: ['lint'] }, [passing(), secrets]))], config)).toContain("checks_required lists 'lint', which is not a check in the config");
+    expect(await errorsFor([file(ticket({ checks_required: ['unit', 'unit'] }))], config)).toContain('checks_required must list distinct config check ids');
+    const withSecrets = (checks: Array<Record<string, unknown>>) => file(done({ checks_required: ['unit'] }, [...checks, secrets]));
+    expect(await errorsFor([withSecrets([passing(), unit])], config)).toBe('');
+    expect(await errorsFor([withSecrets([passing(), { ...unit, command: 'true' }])], config)).toContain("must record the configured command 'npm test'");
+    expect(await errorsFor([withSecrets([passing(), { ...unit, id: 'lint' }])], config)).toContain("check 'lint' needs criteria or must match a configured check id");
   });
 
   it('records manual checks with what was observed', async () => {
@@ -248,7 +262,7 @@ describe('ticket lifecycle with real checks', () => {
   const fixed = 'export const label = (value) => String(value ?? "").trim() || "Passport";\n';
   const regression = 'import test from "node:test";\nimport assert from "node:assert/strict";\nimport { label } from "./app.mjs";\n\ntest("blank labels default to Passport", () => assert.equal(label("  "), "Passport"));\n';
   const command = 'node --test label.test.mjs';
-  const config: ProjectConfig = { ...minimal, checks: [{ id: 'test', command, required: true }] };
+  const config: ProjectConfig = { ...minimal, checks: [{ id: 'test', command, paths: ['**'] }] };
   const run = (cwd: string) => spawnSync(process.execPath, ['--test', 'label.test.mjs'], { cwd, encoding: 'utf8' }).status === 0 ? 'pass' : 'fail';
   const record = (project: string, status: string, outcome: string) => writeFile(path.join(project, '.sdd/beligent/tickets/TICKET-001.md'), file(ticket({
     status, checks: [{ id: 'label-regression', criteria: ['AC-001'], command, outcome }, { id: 'test', command, outcome }],
@@ -440,7 +454,7 @@ describe('CLI', () => {
   it('prints version and returns expected usage/unknown-command exit codes', () => {
     const version = cli(['version']);
     expect(version.status).toBe(0);
-    expect(version.stdout.trim()).toBe('1.0.0');
+    expect(version.stdout.trim()).toBe('1.0.1');
     expect(cli(['unknown']).status).toBe(2);
     expect(cli(['validate', '--unknown']).status).toBe(2);
     expect(cli(['validate', '--since', 'main']).status).toBe(2);
@@ -596,7 +610,7 @@ describe('host installation', () => {
     await writeFile(path.join(project, '.agents/skills/sdd-implement/references/implementation.md'), 'file from an earlier package');
     await writeFile(path.join(project, '.sdd/beligent/guidance/engineering.md'), 'guidance from an earlier version');
     const owned = {
-      '.sdd/beligent/config.json': `${JSON.stringify({ ...minimal, stacks: ['python'], checks: [{ id: 'unit', command: 'npm test', required: true }] }, null, 2)}\n`,
+      '.sdd/beligent/config.json': `${JSON.stringify({ ...minimal, stacks: ['python'], checks: [{ id: 'unit', command: 'npm test', paths: ['**'] }] }, null, 2)}\n`,
       '.sdd/beligent/tickets/TICKET-001.md': file(ticket()).text,
       '.sdd/beligent/guidance/local-api.md': '# Local API rules\n',
       '.agents/skills/team-helper/SKILL.md': '---\nname: team-helper\ndescription: Ours.\n---\n',

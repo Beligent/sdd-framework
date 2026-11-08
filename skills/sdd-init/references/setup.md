@@ -67,19 +67,18 @@ the continuation guard from the [shared contract](shared/governance.md#continuat
 
 ## Inventory and proposal
 
-1. Resolve the project root and read applicable instructions, code, tests,
-   conventions, skill roots and `.sdd/beligent/config.json`. Report pre-1.0
+1. Resolve the project root and read the current instructions, CI, scripts,
+   skill roots and `.sdd/beligent/config.json`; Git history is not needed. Report pre-1.0
    leftovers (`.beligent/`, old skill names, `schema_version` configs, retired
    guidance files, `epics/` or `specs/` folders); there is
    no conversion, and the installer never deletes or rewrites them.
 2. Select hosts and only the stack modules the project uses. Propose the real
-   test, lint and typecheck commands as config `checks`, marking those every
-   ticket must pass as `required`.
-3. Run the dry run and present its plan with the proposed config values in chat.
-   Point out managed files the developer has edited, since `--apply` replaces
-   them, and any conflicts or notes. For an existing project use
-   [the adoption plan](../assets/adoption-plan.md). Existing approval for the
-   exact install counts.
+   test, lint and typecheck commands as config `checks` with the `paths` each
+   covers; `["**"]` only for checks every change must pass, and no `paths` for
+   checks the developer runs.
+3. Run the dry run and present it with [the setup proposal](../assets/adoption-plan.md):
+   changes, problems such as edited managed files `--apply` would replace, and
+   the proposed checks. Existing approval for the exact install counts.
 4. After approval run `--apply`. A freshly created config contains the hosts,
    stacks and project name and no `checks`; write the approved `checks` into
    it as an ordinary reviewed edit afterwards.

@@ -30,10 +30,14 @@ refining open tickets only; it never changes code.
      manual procedure can confirm;
    - explicit about what is out of scope, so the agent does not wander;
    - honest about context: constraints, affected areas and links to existing docs.
-4. Allocate the next ID as described in the
+4. Set `checks_required` to the config checks whose `paths` match the files the
+   work will touch. Checks with `paths: ["**"]` always apply and need not be
+   listed. Name the resulting checks in your
+   report so the developer can adjust the list.
+5. Allocate the next ID as described in the
    [shared contract](references/shared/governance.md#tickets) and write the ticket
    from the [template](assets/ticket.md) with status `todo`.
-5. Run `sdd validate` and report the ticket, open questions and the suggested
+6. Run `sdd validate` and report the ticket, open questions and the suggested
    next prompt, e.g. `/sdd-implement TICKET-042`.
 
 ## Refine, block or cancel

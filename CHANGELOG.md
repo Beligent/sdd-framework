@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.1
+
+- Config checks name the files they cover with `paths` instead of
+  `required: true`. A ticket lists in `checks_required` the checks matching the
+  files its work touches, so frontend work runs frontend checks and backend work
+  backend checks. `paths: ["**"]` marks a check every ticket must pass, such as
+  a secrets scan; a check without `paths` is the developer's to run. A config
+  that still uses `required` is rejected with instructions.
+- `/sdd-implement` iterates with focused tests and runs the listed checks once,
+  on the final diff.
+- `/sdd-init` reports only changes, problems and decisions, and no longer
+  searches Git history.
+
 ## 1.0.0
 
 Breaking release after 0.2.1, with no backward compatibility: earlier

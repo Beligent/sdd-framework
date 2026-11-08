@@ -28,11 +28,14 @@ checks and its own ticket updates. It never commits, pushes or opens a PR.
    Preserve unrelated changes. Ask before a consequential expansion.
 4. Add or update tests for each criterion where practical; prefer a test that
    fails before the change and passes after it.
-5. Run the checks: the tests covering each criterion and the config `checks`
-   marked `required`. Other config checks are the developer's concern. Fix
-   failures you introduced and rerun. After two ineffective fixes for the same
-   symptom, apply the
+5. Test economically. While iterating, run only focused tests: the criterion's
+   test file or the affected package. Fix failures you introduced and rerun.
+   After two ineffective fixes for the same symptom, apply the
    [diagnosis safeguards](references/shared/diagnosis-and-simplicity.md).
+   When the work is complete, run each check in `checks_required` and each config
+   check with `paths: ["**"]` once on the final diff. If the work touched files
+   matching another check's `paths`, add that check to `checks_required` first.
+   Run no other config checks; they are the developer's concern.
 6. Record one check per actual result in the ticket, with its criteria, command
    or procedure and observed result, and outcome. Record results from runs
    against the final diff; after any later change, rerun and replace earlier
@@ -40,7 +43,7 @@ checks and its own ticket updates. It never commits, pushes or opens a PR.
    did not happen.
 7. Set the status and run `sdd validate`:
    - `done` when the work is implemented, every criterion has a passing check,
-     every required config check passed and nothing recorded is failing;
+     every listed and every `**` config check passed and nothing recorded is failing;
    - `blocked` with `blocked_reason` when a check cannot run, a dependency is
      open or a decision belongs to the developer;
    - otherwise keep `in-progress` and report what remains.

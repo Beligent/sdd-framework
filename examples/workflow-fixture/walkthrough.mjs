@@ -61,10 +61,10 @@ try {
   expect(agents.startsWith('# Project rules\n') && agents.includes('runs only when a prompt starts with'), 'handwritten text kept and guard added');
   observed('AGENTS.md keeps its text and gains the command-only Beligent SDD section');
   const config = JSON.parse(await read('.sdd/beligent/config.json'));
-  config.checks = [{ id: 'test', command: 'node --test', required: true }];
+  config.checks = [{ id: 'test', command: 'node --test', paths: ['**/*.mjs'] }];
   await write('.sdd/beligent/config.json', `${JSON.stringify(config, null, 2)}\n`);
   expect(sdd('validate').status === 0, 'config with checks validates');
-  observed('config now requires check `test` (node --test); sdd validate exits 0');
+  observed('config now has check `test` (node --test) covering **/*.mjs; sdd validate exits 0');
   git('add', '-A'); git('commit', '-qm', 'install the Beligent SDD framework');
 
   console.log('1. No command: "Fix the empty passport label" is ordinary work');
@@ -84,22 +84,29 @@ try {
   const vague = sdd('validate');
   expect(vague.status === 1 && vague.stderr.includes('needs a nonempty ## Requirements section') && vague.stderr.includes('AC-001 needs text'), 'vague ticket rejected');
   observed('a ticket without requirements or criterion text is rejected');
-  await ticket(one, { title: 'Clamp negative counts', status: 'todo' }, count);
+  await ticket(one, { title: 'Clamp negative counts', status: 'todo', checks_required: ['test'] }, count);
   expect(sdd('validate').status === 0, 'defined ticket validates');
   observed(`${one} is todo with requirements, AC-001 and an out-of-scope list; sdd validate exits 0`);
 
   console.log(`3. "/sdd-implement ${one}": implement, record checks, set done`);
-  await ticket(one, { title: 'Clamp negative counts', status: 'in-progress' }, count);
+  await ticket(one, { title: 'Clamp negative counts', status: 'in-progress', checks_required: ['test'] }, count);
   expect(nodeTest('regression.test.mjs') === 'fail', 'count test fails before the fix');
   await edit('app.mjs', 'return value;', 'return Math.max(0, value);');
   expect(nodeTest('regression.test.mjs') === 'pass', 'suite passes after the fix');
   await ticket(one, {
-    title: 'Clamp negative counts', status: 'done',
+    title: 'Clamp negative counts', status: 'done', checks_required: ['test'],
+    checks: [{ id: 'count-regression', criteria: ['AC-001'], command: 'node --test regression.test.mjs', outcome: 'pass' }],
+  }, count);
+  const unchecked = sdd('validate');
+  expect(unchecked.status === 1 && unchecked.stderr.includes("required project check 'test' has no passing result"), 'listed check is enforced');
+  observed("done is rejected until the listed check `test` passes");
+  await ticket(one, {
+    title: 'Clamp negative counts', status: 'done', checks_required: ['test'],
     checks: [{ id: 'count-regression', criteria: ['AC-001'], command: 'node --test regression.test.mjs', outcome: 'pass' }, { id: 'test', command: 'node --test', outcome: 'pass' }],
   }, count);
   const closed = sdd('validate');
   expect(closed.status === 0, closed.stderr);
-  observed(`${one} is done: AC-001 and the required project check pass`);
+  observed(`${one} is done: AC-001 and the listed project check pass`);
 
   console.log('4. Failing and blocked checks keep a ticket open');
   await write('blank-title.test.mjs', "import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport { title } from './app.mjs';\n\ntest('blank titles read Untitled', () => assert.equal(title('  '), 'Untitled'));\n");

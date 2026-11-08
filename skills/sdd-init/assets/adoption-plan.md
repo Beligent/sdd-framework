@@ -1,45 +1,22 @@
-# SDD adoption plan: {{project_name}}
+# Setup proposal: {{project_name}}
 
-Status: proposed; no configuration changes authorized by this document alone.
+Status: proposed; nothing written yet.
 
-## Audit and reuse
+**Install:** {{hosts}}; stacks {{stacks}}. Dry run: {{creates_replaces_and_sections, or "no changes"}}.
 
-- Repository root and applicable instructions: {{root_and_instruction_paths}}
-- Architecture, technologies, and validation commands: {{observed_context}}
-- Existing requirements, decisions, and backlog: {{artifact_map}}
-- Existing assistant discovery and installed skills: {{assistant_inventory}}
-- Proposed project checks and which are required: {{checks}}
+**Problems:** {{conflicts_edited_managed_files_and_earlier_leftovers, or "none"}}.
 
-## Proposed changes
+**Proposed checks:**
 
-Attach the installer dry-run plan. Call out every managed file that will be
-replaced although it was edited locally, and where those edits should move.
+```json
+"checks": [
+  { "id": "{{id}}", "command": "{{command}}", "paths": ["{{glob}}"] }
+]
+```
 
-| Path | Current state | Installer action or proposed diff | Category |
-| --- | --- | --- | --- |
-| {{relative_path}} | {{absent_unchanged_or_edited}} | {{create_replace_section_or_keep}} | {{managed_section_or_project}} |
+{{one_line_per_check_explaining_its_paths_and_any_check_left_without_paths}}
 
-Include the complete proposed `.sdd/beligent/config.json` values. List reused paths
-and instruction sections separately. Do not create a second copy of an existing backlog.
+**On approval:** {{the_files_that_will_change}}. Approve, or say what to change?
 
-## Conflicts and decisions
-
-{{conflicting_instructions_local_edits_unsupported_schemas_and_open_questions}}
-
-## Preservation and rollback
-
-{{how_existing_bytes_are_preserved_and_how_to_reverse_only_the_proposed_changes}}
-
-## Authorization
-
-- Developer decision and scope: {{pending_real_decision}}
-- Affected configuration writes: {{paths}}
-- Excluded or unresolved work: {{items}}
-
-## Verification to perform after approval
-
-- Rerun the dry run immediately before `--apply` and compare it with this plan.
-- Validate configuration, paths and section uniqueness (`sdd validate`, `sdd doctor`).
-- Compare existing instructions/artifacts outside approved changes byte for byte.
-- Repeat the dry run and confirm it reports no changes.
-- Report observed discovery and keep unperformed live assistant checks pending.
+<!-- Keep the proposal to about one screen. Report only what changes, what is
+wrong and what the developer decides; omit anything that is fine. -->

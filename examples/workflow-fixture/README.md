@@ -33,12 +33,12 @@ an assistant. Host behavior is covered by the
 ## Scenarios
 
 **0. `/sdd-init`.** `sdd install` writes the five skills to `.agents/skills/`, the
-Node.js guide to `.sdd/beligent/guidance/` and the command-only Beligent section
-after the handwritten text in `AGENTS.md`; a repeat changes nothing. The reviewed
-config edit then adds a required project check:
+Node.js guide to `.sdd/beligent/guidance/` and the command-only Beligent SDD
+section after the handwritten text in `AGENTS.md`; a repeat changes nothing. The
+reviewed config edit then adds a project check covering the `.mjs` files:
 
 ```json
-"checks": [{ "id": "test", "command": "node --test", "required": true }]
+"checks": [{ "id": "test", "command": "node --test", "paths": ["**/*.mjs"] }]
 ```
 
 **1. No command.** *"Fix the empty passport label."* This is ordinary work: the
@@ -46,13 +46,16 @@ regression fails before the fix and passes after it, and no ticket is created.
 
 **2. `/sdd-define Clamp negative counts`.** A ticket without requirements or
 with an empty criterion is rejected. TICKET-001 is written with Context,
-Requirements, `AC-001` and Out of scope, status `todo`.
+Requirements, `AC-001` and Out of scope, status `todo`. The work touches `.mjs`
+files, so the ticket lists `checks_required: [test]`.
 
 **3. `/sdd-implement TICKET-001`.** The ticket moves to `in-progress`, the fix
-lands, and the agent records the checks and sets `done`:
+lands, and the agent records the checks and sets `done`. Done is rejected until
+the listed `test` check has passed:
 
 ```yaml
 status: done
+checks_required: [test]
 checks:
   - { id: count-regression, criteria: [AC-001], command: node --test regression.test.mjs, outcome: pass }
   - { id: test, command: node --test, outcome: pass }
@@ -82,14 +85,15 @@ Recorded on 2026-11-08 by running the walkthrough against the TypeScript CLI
   observed: Applied 60 change(s).
   observed: repeat install reports only unchanged files and keeps config
   observed: AGENTS.md keeps its text and gains the command-only Beligent SDD section
-  observed: config now requires check `test` (node --test); sdd validate exits 0
+  observed: config now has check `test` (node --test) covering **/*.mjs; sdd validate exits 0
 1. No command: "Fix the empty passport label" is ordinary work
   observed: the label test passes after the fix and no ticket exists
 2. "/sdd-define Clamp negative counts": one ticket, requirements first
   observed: a ticket without requirements or criterion text is rejected
   observed: TICKET-001 is todo with requirements, AC-001 and an out-of-scope list; sdd validate exits 0
 3. "/sdd-implement TICKET-001": implement, record checks, set done
-  observed: TICKET-001 is done: AC-001 and the required project check pass
+  observed: done is rejected until the listed check `test` passes
+  observed: TICKET-001 is done: AC-001 and the listed project check pass
 4. Failing and blocked checks keep a ticket open
   observed: done is rejected: check 'blank-title' is fail
   observed: TICKET-002 is blocked with a reason for the developer; sdd validate exits 0

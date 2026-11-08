@@ -65,8 +65,14 @@ criterion.
 
 A manual check uses `procedure` and `observed` instead of `command`. Outcomes are
 `pass`, `fail`, `blocked` and `not-run`. The agent records results from the
-final diff and replaces earlier ones after a later change. Config checks not
-marked `required` are yours to run; the agent need not record them.
+final diff and replaces earlier ones after a later change.
+
+Each config check names the files it covers in `paths`. `/sdd-define` lists in
+the ticket's `checks_required` the checks matching the files the work touches,
+so a frontend ticket runs frontend checks and a backend ticket backend checks.
+A check with `paths: ["**"]`, such as a secrets scan, applies to every ticket.
+A check without `paths` is yours to run. The agent iterates with focused tests
+and runs the listed checks once, on the final diff.
 
 A feature too large for one implementation session becomes several tickets;
 each lists the tickets it builds on in `depends_on`, and `/sdd-implement` stops
@@ -77,7 +83,7 @@ while one of them exists and is not done.
 | `todo`        | Defined, not started                                                                                                              |
 | `in-progress` | Being implemented, or a check failed that the agent can still fix                                                                 |
 | `blocked`     | The agent cannot continue: a check cannot run, a dependency is open, or a decision is yours. `blocked_reason` says what is needed |
-| `done`        | Every criterion has a passing check, every required project check passed and no check is failing. The agent sets it               |
+| `done`        | Every criterion has a passing check, every listed or `**` project check passed and no check is failing. The agent sets it         |
 | `cancelled`   | Dropped on your decision, with `cancelled_reason`                                                                                 |
 
 Done and cancelled tickets are never reopened or edited: a related change is a
@@ -99,32 +105,39 @@ Requires Node.js 22 or later. The CLI does not need Git.
 ### From npm
 
 ```sh
-npx @beligent/sdd-framework@1.0.0 install --host codex --stack nextjs          # dry run: prints the plan
-npx @beligent/sdd-framework@1.0.0 install --host codex --stack nextjs --apply  # writes it
+npx @beligent/sdd-framework install --host codex --stack nextjs          # dry run: prints the plan
+npx @beligent/sdd-framework install --host codex --stack nextjs --apply  # writes it
+
+# Codex and Claude Code in a monorepo with a FastAPI backend and a Next.js frontend
+npx @beligent/sdd-framework install --host codex,claude-code --stack python,fastapi,nextjs,react-typescript,nodejs --apply
 ```
 
-Or install the CLI globally with `npm install -g @beligent/sdd-framework@1.0.0`
-and run `sdd install …` in each project.
+npx may reuse a version it downloaded earlier. To upgrade a project, ask for the
+newest one explicitly: `npx @beligent/sdd-framework@latest install --apply`.
+
+Or install the CLI globally with `npm install -g @beligent/sdd-framework` and
+run `sdd install …` in each project.
 
 ### From a local checkout
 
 ```sh
 cd /path/to/beligent-sdd-framework
 npm ci && npm run build
-mkdir -p /tmp/beligent-pack && npm pack --pack-destination /tmp/beligent-pack
+rm -rf /tmp/beligent-pack && mkdir -p /tmp/beligent-pack && npm pack --pack-destination /tmp/beligent-pack
 
 cd /path/to/target-project
-npx --yes --package /tmp/beligent-pack/beligent-sdd-framework-1.0.0.tgz -- sdd install --host codex --stack nextjs --apply
+npx --yes --package /tmp/beligent-pack/beligent-sdd-framework-*.tgz -- sdd install --host codex --stack nextjs --apply
 ```
 
-To type plain `sdd`, run `npm install -g /tmp/beligent-pack/beligent-sdd-framework-1.0.0.tgz` once.
+To type plain `sdd`, run `npm install -g /tmp/beligent-pack/beligent-sdd-framework-*.tgz` once.
 
 ### Options
 
 - `--host`: one or more of `codex`, `claude-code`, `github-copilot`,
   `github-copilot-cloud`, `cursor`; repeat it or pass a comma-separated list.
   Other names are ignored with a note.
-- `--stack`: `react-typescript`, `nextjs`, `nodejs`, `python`, `fastapi`, or none.
+- `--stack`: one or more of `react-typescript`, `nextjs`, `nodejs`, `python`,
+  `fastapi`, repeated or comma-separated; select only the stacks the project uses.
 - `--name`: project name for a new config (default: the directory name).
 - Without `--host` and `--stack`, the values in the existing config are reused.
   Install, reinstall and upgrade are the same command.
@@ -185,8 +198,10 @@ approve, it applies the plan and edits the config.
   "project": { "name": "demo" },
   "stacks": ["nodejs"],
   "checks": [
-    { "id": "test", "command": "npm test", "required": true },
-    { "id": "lint", "command": "npm run lint" }
+    { "id": "web-test", "command": "npm test", "paths": ["app/**", "site/**"] },
+    { "id": "api-test", "command": "pytest", "paths": ["backend/**"] },
+    { "id": "secrets", "command": "gitleaks detect", "paths": ["**"] },
+    { "id": "build", "command": "npm run build" }
   ]
 }
 ```
@@ -196,7 +211,7 @@ approve, it applies the plan and edits the config.
 | `hosts`        | Assistants to integrate. Unsupported names are ignored                                                                  |
 | `project.name` | Display name                                                                                                            |
 | `stacks`       | Stack guides applied to code requests, with or without a command. Project conventions override generic stack advice     |
-| `checks`       | Project commands. A ticket can be done only when every `required` check has a passing result recorded with this command |
+| `checks`       | Project commands with the `paths` they cover. A ticket must pass its `checks_required` and every `**` check, recorded with this command |
 
 Unknown keys and earlier configurations are rejected. Changing hosts or stacks
 means rerunning `sdd install`; the installer never rewrites the config. Keep

@@ -26,5 +26,5 @@ An observable, testable result.
 
 What the agent must not change.
 
-<!-- Optional frontmatter: depends_on, blocked_reason, cancelled_reason, checks.
+<!-- Optional frontmatter: depends_on, checks_required, blocked_reason, cancelled_reason, checks.
 See references/records.md. A template is never evidence. -->

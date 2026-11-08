@@ -13,7 +13,9 @@ export const LEGACY_CONFIG_PATH = '.beligent/config.json';
 const noConversion = 'Recreate it from the current template; there is no automatic conversion. No files were changed.';
 
 export interface ConfigIssue { path?: string; message: string }
-export type ConfigCheck = { id: string; command: string; required?: boolean };
+export type ConfigCheck = { id: string; command: string; paths?: string[] };
+/** A check whose paths include `**` covers every change, so every ticket must pass it. */
+export const coversEverything = (check: ConfigCheck): boolean => check.paths?.includes('**') ?? false;
 export type ProjectConfig = {
   schema: typeof CONFIG_SCHEMA;
   /** Supported host ids are installed; any other value is ignored. */
@@ -33,6 +35,10 @@ export function validateConfig(value: unknown, allowTemplate = false): ConfigIss
   }
   if (value.schema !== CONFIG_SCHEMA) {
     return [{ path: '/schema', message: `Unsupported schema ${JSON.stringify(value.schema)}; this tool supports "${CONFIG_SCHEMA}". No files were changed.` }];
+  }
+  const removed = Array.isArray(value.checks) ? value.checks.findIndex((check) => isRecord(check) && 'required' in check) : -1;
+  if (removed >= 0) {
+    return [{ path: `/checks/${removed}/required`, message: 'Config checks no longer take "required". Replace it with "paths": the files the check covers, or ["**"] for a check every ticket must pass, such as a secrets scan. No files were changed.' }];
   }
   if (!validateSchema(value)) {
     return (validateSchema.errors ?? []).map((error) => ({
