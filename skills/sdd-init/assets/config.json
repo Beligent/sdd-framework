@@ -1,5 +1,5 @@
 {
-  "schema": "beligent-sdd/config/v2",
+  "schema": "beligent-sdd/config",
   "hosts": [
     "codex"
   ],
@@ -7,15 +7,5 @@
     "name": "{{project_name}}"
   },
   "stacks": [],
-  "checks": [],
-  "tracking": {
-    "required_for": [],
-    "authorization": "request"
-  },
-  "delivery": {
-    "commit": "ask",
-    "push": "ask",
-    "pull_request": "ask",
-    "delivered_at": "merged-pr"
-  }
+  "checks": []
 }

@@ -24,7 +24,7 @@ const temporary = await mkdtemp(path.join(tmpdir(), 'beligent-installer-smoke-')
 try {
   for (const agents of [['codex'], ['claude-code'], ['github-copilot'], ['cursor'], ['codex', 'claude-code', 'github-copilot']]) {
     const project = path.join(temporary, agents.join('-'));
-    const protectedFiles = ['AGENTS.md', 'CLAUDE.md', 'app.mjs', '.sdd/beligent/config.json', '.sdd/beligent/setup-state.json', '.sdd/beligent/tickets/TICKET-999.md'];
+    const protectedFiles = ['AGENTS.md', 'CLAUDE.md', 'app.mjs', '.sdd/beligent/config.json', '.sdd/beligent/tickets/TICKET-999.md'];
     const before = new Map();
     for (const file of protectedFiles) {
       const full = path.join(project, file);

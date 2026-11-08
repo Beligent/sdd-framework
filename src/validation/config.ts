@@ -6,46 +6,30 @@ import schema from '../../schema/config.schema.json' with { type: 'json' };
 const ajv = new Ajv2020({ allErrors: true, strict: false });
 const validateSchema = ajv.compile(schema);
 
-export const CONFIG_SCHEMA = 'beligent-sdd/config/v2';
+export const CONFIG_SCHEMA = 'beligent-sdd/config';
 export const SDD_ROOT = '.sdd/beligent';
 export const CONFIG_PATH = `${SDD_ROOT}/config.json`;
 export const LEGACY_CONFIG_PATH = '.beligent/config.json';
-const noConversion = 'Recreate it from the v2 template; there is no automatic conversion. No files were changed.';
+const noConversion = 'Recreate it from the current template; there is no automatic conversion. No files were changed.';
 
 export interface ConfigIssue { path?: string; message: string }
-export type Host = 'codex' | 'claude-code' | 'github-copilot' | 'cursor' | 'devin';
-export type Permission = 'allowed' | 'ask' | 'never';
 export type ConfigCheck = { id: string; command: string; required?: boolean };
 export type ProjectConfig = {
   schema: typeof CONFIG_SCHEMA;
-  hosts: Host[];
+  /** Supported host ids are installed; any other value is ignored. */
+  hosts: string[];
   project?: { name: string };
   stacks?: Array<'react-typescript' | 'nextjs' | 'nodejs' | 'python' | 'fastapi'>;
   checks?: ConfigCheck[];
-  tracking?: { required_for?: string[]; authorization?: 'request' | 'recorded' };
-  delivery?: { commit?: Permission; push?: Permission; pull_request?: Permission; delivered_at?: 'commit' | 'push' | 'pull-request' | 'merged-pr' };
 };
-
-export const configDefaults = {
-  tracking: { required_for: [] as string[], authorization: 'request' as const },
-  delivery: { commit: 'ask' as const, push: 'ask' as const, pull_request: 'ask' as const, delivered_at: 'merged-pr' as const },
-};
-
-export function authorizationMode(config: ProjectConfig): 'request' | 'recorded' {
-  return config.tracking?.authorization ?? configDefaults.tracking.authorization;
-}
-
-export function deliveredAt(config: ProjectConfig): NonNullable<NonNullable<ProjectConfig['delivery']>['delivered_at']> {
-  return config.delivery?.delivered_at ?? configDefaults.delivery.delivered_at;
-}
 
 export function validateConfig(value: unknown, allowTemplate = false): ConfigIssue[] {
   if (!isRecord(value)) return [{ message: 'configuration must be a JSON object' }];
   if ('schema_version' in value) {
-    return [{ path: '/schema_version', message: `This configuration uses an earlier Beligent schema (schema_version ${JSON.stringify(value.schema_version)}). v2 requires "schema": "${CONFIG_SCHEMA}". ${noConversion}` }];
+    return [{ path: '/schema_version', message: `This configuration uses an earlier Beligent SDD schema (schema_version ${JSON.stringify(value.schema_version)}). This version requires "schema": "${CONFIG_SCHEMA}". ${noConversion}` }];
   }
   if (!('schema' in value)) {
-    return [{ path: '/schema', message: `This configuration has no "schema" marker, so it predates v2. v2 requires "schema": "${CONFIG_SCHEMA}". ${noConversion}` }];
+    return [{ path: '/schema', message: `This configuration has no "schema" marker, so it predates Beligent SDD 1.0. This version requires "schema": "${CONFIG_SCHEMA}". ${noConversion}` }];
   }
   if (value.schema !== CONFIG_SCHEMA) {
     return [{ path: '/schema', message: `Unsupported schema ${JSON.stringify(value.schema)}; this tool supports "${CONFIG_SCHEMA}". No files were changed.` }];
@@ -65,12 +49,12 @@ export function validateConfig(value: unknown, allowTemplate = false): ConfigIss
   return issues;
 }
 
-/** Locates the v2 configuration, or explains why the project has none. */
+/** Locates the configuration, or explains why the project has none. */
 export function locateConfig(projectRoot: string): { path: string } | { issue: string } {
   const configPath = path.join(projectRoot, CONFIG_PATH);
   if (existsSync(configPath)) return { path: configPath };
   if (existsSync(path.join(projectRoot, LEGACY_CONFIG_PATH))) {
-    return { issue: `Pre-v2 Beligent setup found at .beligent/. v2 reads only ${CONFIG_PATH} and never converts or deletes old files. Run sdd-init for a v2 setup and copy any settings you want to keep by hand.` };
+    return { issue: `Pre-1.0 Beligent SDD setup found at .beligent/. This version reads only ${CONFIG_PATH} and never converts or deletes old files. Run sdd-init for a new setup and copy any settings you want to keep by hand.` };
   }
   return { issue: `${CONFIG_PATH} is missing. Run sdd-init to configure the project.` };
 }

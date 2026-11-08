@@ -7,7 +7,7 @@ guarantee that software is secure.
 
 ## Establish evidence quality
 
-Identify the revision or working diff being reviewed, relevant configuration and
+Identify the commit or working diff being reviewed, relevant configuration and
 test environment. Distinguish an observed result from a reported one. Reuse a
 recorded result only when its code, configuration and environment still support
 the claim; rerun affected checks when the implementation has changed.
@@ -22,7 +22,7 @@ hide baseline failures.
 ## Review the changed behavior
 
 Apply the packaged diagnosis and simplicity contract for its canonical
-simplicity question, feature-drift rules, and process-cost check.
+simplicity question and drift rules.
 
 - Correctness: boundary/error cases, partial failure, state transitions, resource
   cleanup, concurrency and backward compatibility where applicable.
@@ -65,10 +65,11 @@ cannot remove a failing criterion merely to make verification pass.
 
 ## Completion and post-close audit
 
-Check agreed behavior and current required checks. Ticket completion does not
-require a universal human acceptance decision or Git milestone. Record failures,
-unverified checks and stale evidence honestly; they keep work open.
+Check the ticket's requirements and criteria against the diff, and rerun the
+relevant checks. Ticket completion covers the AI's part only; it needs no human
+acceptance decision or Git milestone. Record failures, unverified checks and
+contradictory results honestly.
 
-Audits are read-only by default even for closed tickets. Done tickets are final:
-report a missed criterion as a finding; its fix is ordinary work, or a new ticket
-when tracking is explicitly requested. Delivery remains independently authorized.
+Audits are read-only, including for closed tickets. Done tickets are final:
+report a missed criterion as a finding; its fix is ordinary work, or a new
+ticket. Delivery happens only through `sdd-deliver`.

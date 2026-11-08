@@ -1,8 +1,8 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
+import { skills, technologies, technologySource } from './inventory.js';
 
-export const skills = ['sdd-init', 'sdd-define', 'sdd-implement', 'sdd-audit', 'sdd-deliver'];
-const technologies = ['react-typescript', 'nextjs', 'nodejs', 'python', 'fastapi'];
+export { skills } from './inventory.js';
 export type Mapping = { source: string; destination: string };
 
 export function mappings(): Mapping[] {
@@ -11,20 +11,12 @@ export function mappings(): Mapping[] {
     for (const target of targets) pairs.push({ source, destination: `skills/${target}/${relative}` });
   };
   share('skills/sdd-define/references/shared/governance.md', skills.filter((skill) => skill !== 'sdd-define'), 'references/shared/governance.md');
-  share('skills/sdd-define/references/shared/current-task-lifecycle.md', ['sdd-implement', 'sdd-audit'], 'references/shared/current-task-lifecycle.md');
   share('skills/sdd-audit/references/shared/diagnosis-and-simplicity.md', ['sdd-define', 'sdd-implement'], 'references/shared/diagnosis-and-simplicity.md');
-  share('skills/sdd-define/references/records.md', ['sdd-implement', 'sdd-audit', 'sdd-deliver'], 'references/records.md');
-  for (const name of technologies) share(`skills/sdd-implement/references/technology/${name}.md`, ['sdd-define'], `references/technology/${name}.md`);
+  share('skills/sdd-define/references/records.md', ['sdd-init', 'sdd-implement', 'sdd-audit', 'sdd-deliver'], 'references/records.md');
+  for (const name of technologies) share(technologySource(name), ['sdd-define'], `references/technology/${name}.md`);
   share('skills/sdd-implement/references/testing.md', ['sdd-audit'], 'references/testing.md');
   share('skills/sdd-audit/references/review.md', ['sdd-implement'], 'references/review.md');
-  for (const [source, name] of [
-    ['skills/sdd-implement/references/implementation.md', 'engineering.md'],
-    ['skills/sdd-implement/references/testing.md', 'testing.md'],
-    ['skills/sdd-audit/references/review.md', 'review.md'],
-    ['skills/sdd-define/references/shared/governance.md', 'shared/governance.md'],
-    ['skills/sdd-audit/references/shared/diagnosis-and-simplicity.md', 'shared/diagnosis-and-simplicity.md'],
-  ]) share(source!, ['sdd-init'], `assets/guidance/${name}`);
-  for (const name of technologies) share(`skills/sdd-implement/references/technology/${name}.md`, ['sdd-init'], `assets/guidance/${name}.md`);
+  for (const name of technologies) share(technologySource(name), ['sdd-init'], `assets/guidance/${name}.md`);
   return pairs;
 }
 

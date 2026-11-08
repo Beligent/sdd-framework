@@ -1,29 +1,27 @@
 <!-- beligent-sdd:start -->
-## Beligent engineering
+## Beligent SDD
 
-For ordinary code/review requests, read applicable local instructions and
-`.sdd/beligent/config.json` when present. Apply shared guidance in
-`.sdd/beligent/guidance/engineering.md`, `.sdd/beligent/guidance/testing.md` and
-`.sdd/beligent/guidance/review.md`; load only relevant stack modules from that
-folder. These rules apply without invoking a skill. Report unavailable resources.
+The Beligent SDD framework is installed but runs only when a prompt starts with
+one of its commands: `/sdd-init`, `/sdd-define`, `/sdd-implement`, `/sdd-audit`
+or `/sdd-deliver` (`$sdd-…` in Codex). Plain language never starts it, even when
+it names a ticket.
 
-Use one main assistant, keep changes scoped, preserve unrelated edits, add/update
-useful tests where practical and run relevant checks during implementation.
-Record criterion, command/procedure, outcome and implementation snapshot/diff.
-After two ineffective symptom fixes, diagnose before another patch. Optional
-specialists receive a bounded assignment, relevant criteria and expected evidence
-and follow the same project/stack/local standards.
+Without a command, work as an ordinary coding agent. Apply only the stack guides
+in `.sdd/beligent/guidance/` that `.sdd/beligent/config.json` lists in `stacks`
+and the changed files use. Do not read, create or edit files in
+`.sdd/beligent/tickets/`, except as below.
 
-Tracking is opt-in. Implementing a named ticket or requesting tracked work selects
-that scope. Read-only ticket references, audits and automatic skill matching do
-not authorize implementation or record writes. Surface project tracking requirements
-before edits. Keep ordinary work notes/evidence in chat; do not create tickets.
+If a request without a command relates to an open ticket (`todo`, `in-progress`
+or `blocked`), because it names the ticket or continues ticket work from this
+conversation, stop before changing anything and ask whether to keep using the
+framework for it. Read only that ticket's `status` to decide. Suggest the same
+request starting with the command, for example `/sdd-implement TICKET-042 <request>`.
 
-Use sdd-init for reviewed setup/adoption, sdd-define for definition/planning,
-sdd-implement for implementation and verification, sdd-audit for read-only review,
-diagnosis/status, and sdd-deliver for authorized Git actions. A ticket is done when
-agreed work and its required checks pass; failed/blocked/unrun checks leave it open.
-Done and cancelled tickets are final. Audit is optional before/after closure and
-reports findings without changing records; a later fix is ordinary work, or a new
-ticket when tracking is requested. Git delivery is separate from ticket completion.
+- If yes, the developer resends the prompt with the command.
+- If no, set that ticket to `cancelled` with a `cancelled_reason` such as
+  "Continued without the framework". Do not delete it or edit other tickets.
+  Keep all code and tests, and continue without the framework.
+
+Done and cancelled tickets are closed: related work without a command is ordinary
+work. Never commit, push or open a pull request unless the developer asks.
 <!-- beligent-sdd:end -->

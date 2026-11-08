@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { skills } from '../dist/packaging/inventory.js';
 
 const cachePath = mkdtempSync(path.join(tmpdir(), 'beligent-npm-pack-'));
 let result;
@@ -13,11 +14,10 @@ try {
 const pack = JSON.parse(result)[0];
 const files = pack.files.map((entry) => entry.path);
 const problems = [];
-const skills = ['sdd-init', 'sdd-define', 'sdd-implement', 'sdd-audit', 'sdd-deliver'];
 for (const skill of skills) {
   if (!files.includes(`skills/${skill}/SKILL.md`)) problems.push(`Missing published skill entrypoint: ${skill}`);
 }
-const runtimeFiles = ['dist/cli/index.js', 'dist/usage/usage.js', 'dist/validation/config.js', 'dist/validation/records.js', 'dist/validation/git.js'];
+const runtimeFiles = ['dist/cli/index.js', 'dist/usage/usage.js', 'dist/validation/config.js', 'dist/validation/records.js', 'dist/packaging/inventory.js', 'dist/packaging/hosts.js', 'dist/packaging/install.js'];
 for (const required of ['README.md', 'LICENSE', 'CHANGELOG.md', 'package.json', ...runtimeFiles, 'schema/config.schema.json']) {
   if (!files.includes(required)) problems.push(`Missing required package file: ${required}`);
 }

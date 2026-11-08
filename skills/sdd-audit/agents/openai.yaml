@@ -1,0 +1,3 @@
+# Codex: run this skill only when typed as $sdd-audit, never on its own.
+policy:
+  allow_implicit_invocation: false

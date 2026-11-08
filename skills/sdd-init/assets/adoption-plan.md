@@ -6,19 +6,21 @@ Status: proposed; no configuration changes authorized by this document alone.
 
 - Repository root and applicable instructions: {{root_and_instruction_paths}}
 - Architecture, technologies, and validation commands: {{observed_context}}
-- Existing requirements/specifications, decisions, and backlog: {{artifact_map}}
+- Existing requirements, decisions, and backlog: {{artifact_map}}
 - Existing assistant discovery and installed skills: {{assistant_inventory}}
-- Proposed project checks, tracking and delivery settings: {{checks_tracking_delivery}}
+- Proposed project checks and which are required: {{checks}}
 
 ## Proposed changes
 
-| Path | Current content/baseline | Proposed operation and exact diff | Owner after setup |
-| --- | --- | --- | --- |
-| {{relative_path}} | {{observed_hash_or_absent}} | {{addition_or_managed_section_diff}} | {{project_or_managed_section}} |
+Attach the installer dry-run plan. Call out every managed file that will be
+replaced although it was edited locally, and where those edits should move.
 
-Include the complete proposed `.sdd/beligent/config.json` values. List reused paths,
-managed instruction sections, ownership-state entries and each installation
-action separately. Do not create a second copy of an existing backlog.
+| Path | Current state | Installer action or proposed diff | Category |
+| --- | --- | --- | --- |
+| {{relative_path}} | {{absent_unchanged_or_edited}} | {{create_replace_section_or_keep}} | {{managed_section_or_project}} |
+
+Include the complete proposed `.sdd/beligent/config.json` values. List reused paths
+and instruction sections separately. Do not create a second copy of an existing backlog.
 
 ## Conflicts and decisions
 
@@ -30,14 +32,14 @@ action separately. Do not create a second copy of an existing backlog.
 
 ## Authorization
 
-- Human decision, approver, scope/revision, and source: {{pending_real_decision}}
+- Developer decision and scope: {{pending_real_decision}}
 - Affected configuration writes: {{paths}}
 - Excluded or unresolved work: {{items}}
 
 ## Verification to perform after approval
 
-- Recheck all audit hashes before any writes.
-- Validate configuration, paths, section uniqueness, and ownership baselines.
+- Rerun the dry run immediately before `--apply` and compare it with this plan.
+- Validate configuration, paths and section uniqueness (`sdd validate`, `sdd doctor`).
 - Compare existing instructions/artifacts outside approved changes byte for byte.
-- Repeat the same setup and confirm no file bytes or state changed.
+- Repeat the dry run and confirm it reports no changes.
 - Report observed discovery and keep unperformed live assistant checks pending.

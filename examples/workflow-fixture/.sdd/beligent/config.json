@@ -1,5 +1,5 @@
 {
-  "schema": "beligent-sdd/config/v2",
+  "schema": "beligent-sdd/config",
   "hosts": [
     "codex"
   ],

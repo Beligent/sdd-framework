@@ -1,197 +1,95 @@
-# Reviewed host integration procedure
+# Host installation and setup
 
-Canonical source: `skills/sdd-init/references/setup.md`. Setup is performed by the
-assistant with ordinary file operations using this installed skill's assets.
-There is no application scaffolder or agent-specific workflow runtime. The source
-maintainer helper `src/packaging/hosts.ts` prepares a read-only package plan and
-preflights destinations; it never applies consumer changes.
+Canonical source: `skills/sdd-init/references/setup.md`. The deterministic
+installer in the framework CLI applies the mechanical writes; `sdd-init` inspects
+the project, proposes configuration and adoption choices, and runs the installer.
+There is no application scaffolder or workflow runtime.
 
-## 1. Inventory and review
-
-Resolve the consumer root and applicable instructions. Inventory existing code,
-tests, conventions, instructions, skill roots, `.sdd/beligent/config.json` and
-setup-state. Also inspect legacy `.beligent/`, `docs/sdd/`, old skill names and
-versioned or unversioned pre-v2 config. Report them with clean-break options;
-never silently move, rewrite, convert or delete old files.
-
-Select hosts and only relevant stack modules. Propose the project's real test,
-lint and typecheck commands as config `checks`, marking those every tracked
-closure needs as `required`. Default tracking authorization to `request` and
-every delivery permission to `ask`. Delivery does not gate ticket done.
-Show exact config, guidance files, skill copy locations, instruction sections,
-ownership baselines, preservation checks and rollback. Use
-`assets/adoption-plan.md` for existing projects. Present the plan in chat before
-any target writes. Existing approval for the exact scope counts.
-
-| Selected host | Candidate project skill destination | Bridge |
-| --- | --- | --- |
-| Codex | `.agents/skills/` | AGENTS.md |
-| Claude Code | `.claude/skills/` | CLAUDE.md imports @AGENTS.md |
-| Copilot local | `.agents/skills/` | .github/copilot-instructions.md |
-| Cursor | .agents/skills/ (observed with skills@1.7.2); alternate native paths require review | AGENTS.md |
-| Copilot cloud | Confirm committed resources/discovery in its own surface | Do not equate local copies with cloud availability |
-| Devin Desktop with Devin Local | Confirm documented native discovery before choosing paths | No invented installer selector or native flags |
-
-Candidate paths are not live-host certification. Install complete reviewed
-five-skill packages through the pinned external installer or approved exact copies.
-Select only requested host integrations. A shared root (Codex/Copilot) gets one
-copy, not duplicate per-host directories. Inspect all other discovery roots for
-same-name skills and aliases; surface duplicate discovery before applying. Do not
-remove personal/other-host copies without an exact reviewed plan. Use native
-invocation flags only after verifying the selected product supports them; every
-workflow still checks explicit tracking intent before record writes.
-
-## 2. Guidance and whole-plan preflight
-
-Install common assets from `assets/guidance/` into `.sdd/beligent/guidance/`:
-engineering.md, testing.md, review.md, shared/governance.md and
-shared/diagnosis-and-simplicity.md; copy only selected stack modules. Preserve
-relative links. Render `assets/AGENTS.fragment.md` into a managed shared section.
-General/stack/local guidance applies to ordinary prompts without skill selection;
-explicit workflow entrypoints stay in native skill directories. Optional
-specialists use the host's native mechanism only when available, bounded criteria
-and evidence expectations, and the same shared guidance. One main agent is default.
-
-Before the first write:
-
-- Parse strict JSON, reject duplicate/unknown keys and validate the config against
-  the v2 shape in `assets/config.json` (`"schema": "beligent-sdd/config/v2"`).
-  Record directories under `.sdd/beligent/` are created only with their first
-  record. No frameworks.json.
-- Inventory bytes/hashes or absence for every destination. Only the approved host
-  copies, selected shared guidance, config, managed sections and ownership state
-  can change. Configuration and instruction refresh are distinct reviewed scopes.
-- Reject escaping paths, symlink ancestors/destinations, hard-linked files,
-  file/directory collisions and destinations in .git or unrelated installed roots.
-  Check `.sdd` and `.sdd/beligent` ancestors. Recheck after approval before writes.
-- Preserve valid existing config and artifacts. Shared guidance is project-owned;
-  record its initial baseline, never overwrite local modifications on repeat setup.
-  Reused resources do not become owned merely because they were read.
-- Inspect AGENTS.md, CLAUDE.md/.claude/CLAUDE.md and Copilot instructions. Preserve
-  handwritten bytes and supported imports. Root Claude uses @AGENTS.md; nested
-  Claude uses @../AGENTS.md. Reuse equivalent imports rather than duplicate them.
-  Ambiguous precedence or duplicate discovery requires a resolution proposal.
-- Reject malformed/nested/repeated managed markers or unknown ownership. Compare
-  existing managed content with setup-state hashes. A local edit requires review,
-  not regeneration. A hash alone cannot reconstruct a missing baseline.
-- Preflight the entire plan and recheck inventoried bytes immediately before
-  applying. Any unresolved conflict stops all writes, including directory creation.
-
-## 3. Ownership state and exact hashes
-
-Create `.sdd/beligent/setup-state.json` with this schema:
-
-```json
-{
-  "schema_version": 1,
-  "integration_version": "0.1.0",
-  "files": {
-    ".sdd/beligent/config.json": {
-      "sha256": "<64 lowercase hexadecimal digits>",
-      "ownership": "file"
-    },
-    ".sdd/beligent/overview.md": {
-      "sha256": "<64 lowercase hexadecimal digits>",
-      "ownership": "file"
-    },
-    "AGENTS.md": {
-      "sha256": "<64 lowercase hexadecimal digits>",
-      "ownership": "section"
-    }
-  }
-}
+```sh
+sdd install --host codex --stack nextjs           # dry run: prints the plan
+sdd install --host codex --stack nextjs --apply
 ```
 
-The sample paths vary with the approved configuration. Record only resources
-actually created or sections actually added by setup; reused files never become
-owned merely because setup read them. Do not record the state file itself,
-installer lock files, installed skills, or directories in `files`.
+Run `sdd` from the framework package the developer installed from: a packed
+tarball (`npx --package <path-to-tgz> -- sdd …`) or a registry version that
+contains `install` (1.0.0 or later). Ask the developer which when unsure.
 
-For `ownership: "file"`, SHA-256 covers the complete bytes written. Config and
-overview become project-owned after creation: their hashes preserve the original
-baseline, not permission to regenerate them. A valid changed config is read as
-current project configuration; never overwrite it or refresh its baseline merely
-because setup repeats. A changed overview is likewise preserved; a mismatch
-requires explicitly resolving its tracking or any proposed update. When a file
-is deliberately released from tracking, review that state-only change separately.
+Install, reinstall and upgrade are the same command. Without `--host` or
+`--stack` the installer uses the hosts and stacks in `.sdd/beligent/config.json`.
+The dry run lists every create, replace, remove and section change; `--apply`
+writes nothing when the plan has a blocker or conflict.
 
-For `ownership: "section"`, SHA-256 covers the exact UTF-8 bytes from the first
-byte of `<!-- beligent-sdd:start -->` through the last byte of
-`<!-- beligent-sdd:end -->`, inclusive, excluding any following newline. There
-must be exactly one start and one end marker, in that order, both on their own
-lines. Use section ownership for instruction fragments even when setup creates
-the instruction file. Preserve all bytes outside that section on refresh.
-When adding a section, preserve the existing bytes and append a necessary newline
-separator plus the rendered section; do not normalize existing newline formats.
+## Replacement policy
 
-Use actual output bytes to compute hashes, never a template or decoded/re-encoded
-approximation. For example, this read-only Python snippet prints an exact hash
-and does not implement setup:
+An explicit install request authorizes these writes and no others:
 
-```python
-from hashlib import sha256
-from pathlib import Path
+| Destination | Behavior |
+| --- | --- |
+| Fully managed: the five skill directories under each selected root, and the selected stack guides in `.sdd/beligent/guidance/` (for example `nodejs.md`) | Replaced with the packaged bytes even when edited locally; missing files are recreated; files the package no longer contains are removed from those five skill directories |
+| Shared instructions: `AGENTS.md`, plus `CLAUDE.md` (or an existing `.claude/CLAUDE.md`) for Claude Code and `.github/copilot-instructions.md` for Copilot | Only the section from `<!-- beligent-sdd:start -->` to `<!-- beligent-sdd:end -->` is replaced, or appended once when absent. Duplicate, unterminated or misplaced markers are a conflict and the file is left intact |
+| Project-owned: `.sdd/beligent/config.json` | Created from [the template](../assets/config.json) when missing, otherwise kept. An invalid or pre-1.0 config blocks the install until the developer fixes or moves it |
+| Everything else, including tickets, other files in `guidance/`, other skills and unselected roots | Never written. Guidance files from earlier versions (`engineering.md`, `testing.md`, `review.md`, `shared/`) are reported for the developer to delete |
 
-data = Path("AGENTS.md").read_bytes()
-start = b"<!-- beligent-sdd:start -->"
-end = b"<!-- beligent-sdd:end -->"
-assert data.count(start) == data.count(end) == 1
-first = data.index(start)
-last = data.index(end)
-assert first < last
-section = data[first:last + len(end)]
-print(sha256(section).hexdigest())
-```
+Destinations resolve from the project root; symlinked or hard-linked paths,
+directory collisions and paths outside the project are conflicts. Each file is
+written through a temporary sibling and renamed. A repeat with the same inputs
+writes nothing. If a write fails, rerun the same command to finish. No
+`setup-state.json` or ownership hashes are created or read; an old one is ignored
+and left for the developer to delete. Edits belong outside managed files: put
+project rules in `AGENTS.md` outside the section or in separate guidance files.
 
-Validate state keys as safe paths, ownership as `file` or `section`, and hashes
-as 64 lowercase hexadecimal digits. Integration revision `0.1.0` is independent
-of project configuration and skill version/provenance. An unknown newer
-integration revision is not a request to downgrade it: stop affected integration
-writes and propose a supported refresh path.
+## Hosts and destinations
 
-## 4. Apply approved changes and verify
+| `--host` | Surfaces | Skill root | Instruction files | Explicit start |
+| --- | --- | --- | --- | --- |
+| `codex` | Codex in VS Code and CLI | `.agents/skills` | AGENTS.md | `$sdd-implement TICKET-042` or `/skills` |
+| `claude-code` | Claude Code in VS Code and CLI | `.claude/skills` | AGENTS.md, CLAUDE.md importing `@AGENTS.md` | `/sdd-implement TICKET-042` |
+| `github-copilot` | Copilot VS Code agent mode and CLI | `.agents/skills` | AGENTS.md, `.github/copilot-instructions.md` | VS Code: `/` in chat. CLI: `/skills list`, then a prompt starting with `/sdd-implement TICKET-042` |
+| `github-copilot-cloud` | Copilot cloud agent | `.agents/skills` (committed) | AGENTS.md, `.github/copilot-instructions.md` | Assign a task whose text starts with `/sdd-implement TICKET-042`; GitHub documents that Copilot picks skills from the prompt, not that a command selects one |
+| `cursor` | Cursor Agent | `.agents/skills` | AGENTS.md | `/` in Agent chat |
 
-After every conflict is resolved and all preflight checks pass, create only the
-approved missing directories/files and managed sections. Render placeholders in
-new assets, preserve existing project files, and write the ownership state last.
-Use safe per-file writes and retain the reviewed before-images until verification
-finishes. If a write fails, stop, report exactly what changed, and propose or
-perform the already authorized reversal of only this run's changes. Do not
-delete unrelated files or claim multi-file writes are atomic.
+VS Code documents `.agents/skills` for its Local harness; its Copilot harness
+lists `.github/skills`, so name the harness when reporting discovery. Hosts
+sharing a root share one copy. Copilot and Cursor can also read
+`.claude/skills`, so selecting them with Claude Code may list each skill twice;
+the copies are identical. Skill roots come from host documentation and are not
+live certification.
 
-Validate resulting JSON, paths, actual file/section hashes, and the overview
-links. Compare preserved files and instruction text outside approved additions
-against the inventory. Verify skill locations exist for the selected assistant
-or report installation as a remaining step; these instructions do not implement
-skill registration. Create ticket directories only for explicitly selected tracking. Other approved
-artifact directories may be created locally; Git stores only their files. No `.gitkeep` files are required.
+## Command-only activation
 
-For an identical repeat with the same valid config and matching ownership state,
-reuse all resources and produce **no writes at all**: no timestamp, changed
-whitespace, new state serialization, baseline refresh, or appended duplicate
-sections. A repeat is not an integration refresh. If newly selected capabilities
-or config paths need changes, present an incremental plan instead of overwriting
-the existing integration.
+Every skill sets `disable-model-invocation: true` in its frontmatter, which
+Claude Code, VS Code Copilot and Cursor honor, and ships `agents/openai.yaml`
+with `policy.allow_implicit_invocation: false` for Codex. The skills then run
+only when typed as a command. Where a host documents no such setting, the skill
+descriptions and the instruction section are the only protection. Without
+a command, the instruction section applies only the selected stack guides and
+the continuation guard from the [shared contract](shared/governance.md#continuation-guard).
 
-Report additions, changes, reused/skipped paths, conflicts, selected configuration,
-and actual checks. Record an observed live assistant smoke test separately from
-installation-layout validation. Setup does not approve product scope,
-implementation, or completion and does not publish or modify application code.
+## Inventory and proposal
 
-## 5. Maintenance boundaries
+1. Resolve the project root and read applicable instructions, code, tests,
+   conventions, skill roots and `.sdd/beligent/config.json`. Report pre-1.0
+   leftovers (`.beligent/`, old skill names, `schema_version` configs, retired
+   guidance files, `epics/` or `specs/` folders); there is
+   no conversion, and the installer never deletes or rewrites them.
+2. Select hosts and only the stack modules the project uses. Propose the real
+   test, lint and typecheck commands as config `checks`, marking those every
+   ticket must pass as `required`.
+3. Run the dry run and present its plan with the proposed config values in chat.
+   Point out managed files the developer has edited, since `--apply` replaces
+   them, and any conflicts or notes. For an existing project use
+   [the adoption plan](../assets/adoption-plan.md). Existing approval for the
+   exact install counts.
+4. After approval run `--apply`. A freshly created config contains the hosts,
+   stacks and project name and no `checks`; write the approved `checks` into
+   it as an ordinary reviewed edit afterwards.
 
-- **Skill update:** review source/revision and replace installed skills through
-  the chosen installer. Only skill content and installer provenance change.
-  Project config, instruction files, setup state, and artifacts remain unchanged.
-- **Earlier configurations:** there is no conversion. Report them and set up v2
-  afresh; never reinterpret old settings or remove old files silently.
-- **Instruction refresh:** compare the current managed section against its
-  recorded baseline before proposing a new section. Matching bytes permit the
-  reviewed replacement; local edits require a three-way merge proposal using
-  current text, recorded baseline/source revision, and proposed content. If the
-  baseline cannot be recovered, request an explicit manual resolution rather
-  than reconstructing it from its hash. Update only approved section hashes and
-  the integration revision. Preserve user text, config, and artifacts.
+## Verify
 
-These are independent operations. A newer skill never silently performs an
-instruction refresh, and a hash match does not itself supply human approval.
+Run `sdd validate` and `sdd doctor`, then repeat the dry run and confirm it
+reports no changes. Compare instruction text outside the section and project
+files with the inventory. Report installation results separately from a live
+host session: a live test checks that each skill appears in the host's command
+list, starts when typed as a command, and does not load for a plain prompt.
+Setup does not approve product scope, create tickets, initialize Git or change
+application code.

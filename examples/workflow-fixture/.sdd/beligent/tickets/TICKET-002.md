@@ -1,30 +1,31 @@
 ---
-schema: beligent-sdd/ticket/v2
+schema: beligent-sdd/ticket
 id: TICKET-002
 title: Trim task titles
 status: done
-revision: 1
-epic: EPIC-001
-spec_criteria: [SPEC-001/AC-001]
-implementation:
-  base: 778afa1f3c24
-  snapshot: git-tree:5aea53cc86db3e41bf77c98e15550bf3f5f951a8
 checks:
-  - id: spec-regression
-    criteria: [SPEC-001/AC-001]
-    required: true
+  - id: title-regression
+    criteria: [AC-001]
     command: BELIGENT_FIXTURE_MODULE=./app.mjs node --test regression.test.mjs
-    coverage: added
-    tests: [regression.test.mjs]
     outcome: pass
-    revision: 1
-    snapshot: git-tree:5aea53cc86db3e41bf77c98e15550bf3f5f951a8
 ---
 
 # Trim task titles
 
-Implements [SPEC-001/AC-001](../specs/SPEC-001.md) for [EPIC-001](../epics/EPIC-001.md).
+## Context
+
+Task titles keep stray whitespace from the import, so lists look misaligned.
+
+## Requirements
+
+`title` returns the task title without leading or trailing whitespace.
 
 ## Acceptance criteria
 
-Defined by the shared spec criterion listed in `spec_criteria`.
+### AC-001
+
+Titles are trimmed.
+
+## Out of scope
+
+Truncating long titles.

@@ -1,57 +1,50 @@
 ---
 name: sdd-implement
-description: Implement ordinary code requests or a selected tracked task using project engineering standards, useful tests, implementation-time verification and root-cause safeguards; stop ready for delivery.
+description: Use only when the prompt starts with /sdd-implement or $sdd-implement. Implements one ticket against its requirements, runs and records its checks, and sets it done or blocked. Never commits.
+disable-model-invocation: true
 ---
 
-# Implement and verify one change
+# Implement a ticket
 
-Engineering standards apply to every code request. Ticket tracking is optional.
-Read applicable instructions, relevant code/tests/conventions, configuration when
-present, [engineering guidance](references/implementation.md),
-[testing](references/testing.md), [review](references/review.md),
-[governance](references/shared/governance.md), the
-[lifecycle](references/shared/current-task-lifecycle.md), and
-[diagnosis safeguards](references/shared/diagnosis-and-simplicity.md).
-Load only relevant technology modules from `references/technology/`.
-Prefer shared `.sdd/beligent/guidance/` when installed; packaged references are
-the portable fallback. Missing configuration does not block ordinary authorized
-code work. Earlier configurations are rejected, not converted.
+Read project instructions, `.sdd/beligent/config.json`, the
+[shared contract](references/shared/governance.md), the
+[ticket contract](references/records.md), [engineering](references/engineering.md),
+[testing](references/testing.md) and [review](references/review.md) guidance, and
+only the relevant [technology](references/technology/nodejs.md) modules in
+`references/technology/`. This command authorizes the ticket's code, tests,
+checks and its own ticket updates. It never commits, pushes or opens a PR.
 
-1. Establish one current change, the user's authorization, observable behavior,
-   criteria, boundaries and existing working changes. Reuse a named task when
-   supplied; ask only if multiple tasks are ambiguous. Without tracking, keep
-   sufficient definition and verification in chat; do not allocate IDs or write
-   `.sdd/beligent/` records just to implement.
-2. Skip already satisfied definition/planning. Clarify blocking gaps together.
-   Use concise notes for obvious work. Plan only when complexity, sequencing,
-   risk or explicit intent warrants it. Do not plan later backlog work.
-3. Discover actual project commands and establish a relevant baseline. Select a
-   useful regression test or observable check. Add necessary tests for changed
-   behavior; TDD is useful when a meaningful failure can be demonstrated. Do not
-   fabricate pre-change failures or add tests that merely repeat static text.
-4. Implement the smallest coherent change. Preserve unrelated edits and resolved
-   decisions. Review trust boundaries, errors, compatibility, documentation,
-   maintainability and unnecessary abstraction. Ask before consequential scope
-   expansion; defer unrelated findings without creating tickets.
-5. Run relevant checks during implementation: the project checks in config
-   `checks` (always those marked `required`) and other tests proportionate to
-   changed behavior and risk. Record commands and results. Fix introduced failures and
-   rerun affected checks for the final diff. Missing tooling/services, skipped
-   checks and pre-existing failures remain visible and never become passes.
-6. After two ineffective symptom-level fixes for the same behavior, stop patching
-   and apply the diagnosis contract before another corrective attempt. Diagnosis
-   does not authorize broader behavior or design changes.
-7. Review the final diff and map each criterion to pass, fail, blocked, not-run or a
-   justified not-applicable result. Request only relevant manual validation not
-   already established. Report changed behavior, tests, limits and remaining risk.
-8. For explicitly tracked work, follow the [record contract](references/records.md).
-   Run `sdd snapshot` on the final implementation, record `implementation` and
-   one check per actual result at the current revision and snapshot, then run
-   `sdd validate --snapshot <TICKET-ID>`. Mark done only when agreed work and
-   every required check pass; a failed check keeps it `in-progress`, an external
-   blocker makes it `blocked`. A done ticket is final; never reopen it.
-
-Stop done/verified, pending required manual validation, blocked, or
-`diagnosis-required`. A separate audit is optional unless project policy requires
-it; it never substitutes for implementation-time checks. Do not commit, push,
-open/merge a PR or make unrelated record updates. Use `sdd-deliver` for delivery.
+1. Select the ticket named in the prompt. Without one, list open tickets and ask.
+   With no ticket at all, offer `/sdd-define` first.
+   - `done` or `cancelled`: report that it is final and stop. Suggest a new
+     ticket (`/sdd-define …`) or doing the change without the framework.
+   - `blocked`: continue only once its `blocked_reason` is resolved; then clear
+     it and set `in-progress`.
+   - An open `depends_on` ticket (one that exists and is not `done`): set or
+     keep `blocked` naming it, and stop before coding.
+   - Unclear or contradictory requirements: ask before coding, or set `blocked`.
+2. Set `todo` to `in-progress`, re-reading the ticket immediately before writing.
+3. Follow the requirements and stay inside the ticket's scope and Out of scope.
+   Preserve unrelated changes. Ask before a consequential expansion.
+4. Add or update tests for each criterion where practical; prefer a test that
+   fails before the change and passes after it.
+5. Run the checks: the tests covering each criterion and the config `checks`
+   marked `required`. Other config checks are the developer's concern. Fix
+   failures you introduced and rerun. After two ineffective fixes for the same
+   symptom, apply the
+   [diagnosis safeguards](references/shared/diagnosis-and-simplicity.md).
+6. Record one check per actual result in the ticket, with its criteria, command
+   or procedure and observed result, and outcome. Record results from runs
+   against the final diff; after any later change, rerun and replace earlier
+   results, including those from a previous session. Never record a result that
+   did not happen.
+7. Set the status and run `sdd validate`:
+   - `done` when the work is implemented, every criterion has a passing check,
+     every required config check passed and nothing recorded is failing;
+   - `blocked` with `blocked_reason` when a check cannot run, a dependency is
+     open or a decision belongs to the developer;
+   - otherwise keep `in-progress` and report what remains.
+8. Report the changed behavior, the checks with their results, limits and
+   remaining risk. Done covers the AI's part only; the developer reviews the
+   diff and owns the feature. Suggest `/sdd-deliver TICKET-042` when they want
+   it committed.

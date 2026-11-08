@@ -1,51 +1,118 @@
-# Runnable workflow fixture
+# Workflow walkthrough
 
-Run from this directory with Node.js 22+:
+A small Node.js example of the Beligent SDD framework flow: work without a command, a ticket
+defined and implemented to done, failing and blocked checks, ticket removal
+before delivery, and the "no" answer to the continuation guard. It has two parts:
+
+- [`walkthrough.mjs`](walkthrough.mjs), which runs the real `sdd` CLI and real
+  `node --test` runs in a disposable Git project and checks every outcome it prints;
+- static sample tickets under [`.sdd/beligent/tickets/`](.sdd/beligent/tickets/),
+  which `npm run validate:framework` validates.
+
+## Run it
+
+From the repository root, with Node.js 22 or later:
 
 ```sh
-node --test regression.test.mjs
-node run-scenarios.mjs
+npm ci
+npm run build
+node examples/workflow-fixture/walkthrough.mjs          # add --keep to inspect the project
 ```
 
-The scenario runner executes real tests: a failing-before reproduction, the
-passing fix, a required check that fails, and a post-close regression. Expected
-failing subprocesses are asserted, not counted as passes. It writes no config,
-records, application files or Git state. `before.mjs` and `audit-regression.mjs`
-are deliberately broken reproduction inputs; `app.mjs` is the implementation.
+The script copies `app.mjs` and `regression.test.mjs` into a temporary
+directory, seeds two defects, runs `sdd install --host codex --stack nodejs
+--apply`, and deletes the directory at the end. It writes nothing in this
+repository. `npm test` runs the same script against the TypeScript source.
 
-## Direct work, no ticket
+The script stands in for the developer and the assistant: it edits code and
+writes tickets the way the commands would. The quoted commands show what a
+developer would type in a host; they are **illustrative** and were not sent to
+an assistant. Host behavior is covered by the
+[live test procedure](../../README.md#live-test-in-a-host).
 
-An ordinary request to fix the empty passport label loads project and Node
-guidance, reproduces the bug against `before.mjs`, passes the regression against
-`app.mjs` and reports the evidence in chat. It creates no records. The `.sdd`
-files below illustrate separate tracked scenarios.
+## Scenarios
 
-## Tracked records
+**0. `/sdd-init`.** `sdd install` writes the five skills to `.agents/skills/`, the
+Node.js guide to `.sdd/beligent/guidance/` and the command-only Beligent section
+after the handwritten text in `AGENTS.md`; a repeat changes nothing. The reviewed
+config edit then adds a required project check:
 
-- [TICKET-001](.sdd/beligent/tickets/TICKET-001.md): a standalone done ticket with
-  local criteria, a failing-before regression and no epic or spec.
-- [EPIC-001](.sdd/beligent/epics/EPIC-001.md) groups
-  [TICKET-002](.sdd/beligent/tickets/TICKET-002.md) and
-  [TICKET-003](.sdd/beligent/tickets/TICKET-003.md), which both take their
-  criteria from the shared [SPEC-001](.sdd/beligent/specs/SPEC-001.md).
-- [TICKET-004](.sdd/beligent/tickets/TICKET-004.md) stays `in-progress` because its
-  required regression fails.
-- `cases/invalid-done.md` declares `done` with that failing check. It sits outside
-  the record directories; the test suite copies it into a disposable project and
-  confirms that `sdd validate` rejects it.
+```json
+"checks": [{ "id": "test", "command": "node --test", "required": true }]
+```
 
-The check commands are runnable from this directory. The `git-tree:` snapshot
-values are **illustrative**: this fixture is not its own Git repository, so they
-were not produced by `sdd snapshot`. The repository test suite exercises real
-snapshots in a temporary Git repository.
+**1. No command.** *"Fix the empty passport label."* This is ordinary work: the
+regression fails before the fix and passes after it, and no ticket is created.
 
-## Audit after closure
+**2. `/sdd-define Clamp negative counts`.** A ticket without requirements or
+with an empty criterion is rejected. TICKET-001 is written with Context,
+Requirements, `AC-001` and Out of scope, status `todo`.
 
-`audit-regression.mjs` simulates a later regression in done work. An audit
-reports it read-only; the done ticket stays unchanged, and the fix is an ordinary
-request, or a new ticket if tracking is explicitly requested.
+**3. `/sdd-implement TICKET-001`.** The ticket moves to `in-progress`, the fix
+lands, and the agent records the checks and sets `done`:
 
-In a configured host, `Use sdd-implement for TICKET-004` should resume that
-ticket and close it only once its required check passes; `Use sdd-audit verify
-TICKET-001` should report findings without editing records. These are prompts to
-try, not observed host results.
+```yaml
+status: done
+checks:
+  - { id: count-regression, criteria: [AC-001], command: node --test regression.test.mjs, outcome: pass }
+  - { id: test, command: node --test, outcome: pass }
+```
+
+**4. Failing and blocked checks.** TICKET-002 ("Name blank titles") has a check
+that fails because the behavior is not implemented. Marking it `done` is
+rejected; `blocked` with a `blocked_reason` for the developer is accepted.
+
+**5. `/sdd-deliver TICKET-001`.** The agent asks whether to delete the finished
+ticket; the developer agrees, so it is deleted before the commit, and its criteria go into the commit message. TICKET-002 still validates
+although it depends on the removed ticket, and the next ID is TICKET-003 because
+IDs come from Git history and are never reused.
+
+**6. Leaving the framework.** TICKET-003 is in progress when the developer
+continues without a command and answers "no" to the continuation guard: the
+ticket is set to `cancelled` with a reason and kept, and the code change stays.
+The developer deletes it later, or `/sdd-deliver` asks before committing.
+
+## Observed output
+
+Recorded on 2026-11-08 by running the walkthrough against the TypeScript CLI
+(Node.js 22, macOS).
+
+```text
+0. "/sdd-init": install for Codex with Node.js guidance, then the reviewed config edit
+  observed: Applied 60 change(s).
+  observed: repeat install reports only unchanged files and keeps config
+  observed: AGENTS.md keeps its text and gains the command-only Beligent SDD section
+  observed: config now requires check `test` (node --test); sdd validate exits 0
+1. No command: "Fix the empty passport label" is ordinary work
+  observed: the label test passes after the fix and no ticket exists
+2. "/sdd-define Clamp negative counts": one ticket, requirements first
+  observed: a ticket without requirements or criterion text is rejected
+  observed: TICKET-001 is todo with requirements, AC-001 and an out-of-scope list; sdd validate exits 0
+3. "/sdd-implement TICKET-001": implement, record checks, set done
+  observed: TICKET-001 is done: AC-001 and the required project check pass
+4. Failing and blocked checks keep a ticket open
+  observed: done is rejected: check 'blank-title' is fail
+  observed: TICKET-002 is blocked with a reason for the developer; sdd validate exits 0
+5. "/sdd-deliver TICKET-001": the developer agrees to delete the finished ticket before the commit
+  observed: TICKET-001 is removed, its criteria stay in the commit message, and TICKET-002 still validates
+  observed: the next ID is TICKET-003, taken from Git history, so a removed ID is never reused
+6. Continuing TICKET-003 without a command, then answering "no"
+  observed: TICKET-003 is cancelled with a reason, the code change stays, and the developer continues alone
+All walkthrough checks passed.
+```
+
+## Static sample tickets
+
+Their check commands run from this directory: `regression.test.mjs` imports the
+module named by `BELIGENT_FIXTURE_MODULE`.
+
+- [TICKET-001](.sdd/beligent/tickets/TICKET-001.md): a done ticket with a
+  regression check (`before.mjs` holds the original bug).
+- [TICKET-002](.sdd/beligent/tickets/TICKET-002.md) and
+  [TICKET-003](.sdd/beligent/tickets/TICKET-003.md): done tickets;
+  TICKET-003 depends on TICKET-002.
+- [TICKET-004](.sdd/beligent/tickets/TICKET-004.md) stays `in-progress` because
+  its check fails against `before.mjs`.
+- `cases/invalid-done.md` declares `done` with that failing check; the test suite
+  copies it into a disposable project and confirms `sdd validate` rejects it.
+- `audit-regression.mjs` is a later regression in done work, for `/sdd-audit` practice.

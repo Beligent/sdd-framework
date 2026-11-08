@@ -1,13 +1,16 @@
-# Implementation, documentation and refactoring
+# Engineering standards
 
-Use this reference for engineering execution. Behavior comes from the authorized request or existing tracked contract.
-Use these standards for ordinary code requests without requiring a ticket.
-Reference existing specifications rather than rewriting them. Untracked plans,
-verification and follow-up observations remain in chat.
+Canonical source: `skills/sdd-implement/references/engineering.md`. It applies
+inside framework commands; without a command only the selected stack guides apply.
 
-Apply [governance](shared/governance.md) for scope and authorization and the
-[diagnosis contract](shared/diagnosis-and-simplicity.md) when evidence contradicts
-the approach or two symptom fixes fail. These standards apply without tracking.
+Apply the [shared contract](shared/governance.md) for activation, scope and trust,
+[testing](testing.md) for checks and evidence, [review](review.md) before handoff
+and the [diagnosis contract](shared/diagnosis-and-simplicity.md) when evidence
+contradicts the approach or two symptom fixes fail. Load only the stack modules
+named in config `stacks` that the changed files use, and the local or subsystem
+instructions that govern those files. Behavior comes from the ticket's
+requirements; plans and follow-up observations stay in chat or the ticket's
+Context. Reference existing project documentation rather than rewriting it.
 
 ## Establish the change boundary
 
@@ -19,7 +22,8 @@ the approach or two symptom fixes fail. These standards apply without tracking.
   suite merely to begin a small change.
 - Plan only when useful for complexity, sequencing or risk. Keep concise notes
   in chat for untracked work or in an existing task for tracked work. Follow
-  applicable plans/ADRs and raise consequential contradictions before changing scope.
+  applicable project plans and decision records and raise consequential
+  contradictions before changing scope.
 - Reuse the project's database, state management, test runner, deployment and
   dependency choices. A new dependency needs a concrete benefit and review of
   its maintenance, license and integration cost; it is not a default solution.
@@ -47,9 +51,9 @@ requested rather than expanding the approved scope.
 
 Update documentation when usage, configuration, API behavior, operations or
 recovery steps change. Examples must match the implemented contract. Explain a
-non-obvious constraint or tradeoff near the affected code, while durable
-architecture decisions belong in an ADR when warranted. Do not duplicate the
-requirements document in code comments or invent completion evidence in a guide.
+non-obvious constraint or tradeoff near the affected code; durable architecture
+decisions belong in the project's own decision records when warranted. Do not
+copy specifications into code comments or invent completion evidence in a guide.
 
 ## Review before handoff
 
@@ -61,6 +65,6 @@ and tests, then record commands, environment assumptions and actual outcomes.
 
 A green build alone cannot establish a criterion that the build does not exercise.
 Link test cases, an observed manual check or a reasoned code review to each
-criterion. Mark untested behavior explicitly. Report verification separately from human acceptance and Git delivery. Update
-an existing tracked task only when tracking is selected; never create a ticket
-to record ordinary implementation evidence.
+criterion. Mark untested behavior explicitly. Report verification separately from the
+developer's acceptance and Git delivery. Create follow-up tickets only when the
+developer asks.

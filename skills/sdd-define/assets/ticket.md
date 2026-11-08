@@ -1,21 +1,20 @@
 ---
-schema: beligent-sdd/ticket/v2
+schema: beligent-sdd/ticket
 id: TICKET-001
 title: "Ticket outcome"
 status: todo
-revision: 1
 ---
 
 # Ticket outcome
 
-## Objective
+## Context
 
-What changes and why it matters.
+Why this work exists and what the agent needs to know: affected area, links to
+existing documentation, constraints.
 
-## Scope
+## Requirements
 
-Expected behavior, explicit exclusions and assumptions. Link a shared spec or
-epic when one applies, and add its criteria to `spec_criteria`.
+The behavior to build, in plain language. One bounded piece of AI work.
 
 ## Acceptance criteria
 
@@ -23,6 +22,9 @@ epic when one applies, and add its criteria to `spec_criteria`.
 
 An observable, testable result.
 
-<!-- Add frontmatter only when relevant: epic, spec_criteria, depends_on,
-blocked_reason, cancelled_reason, authorization, implementation, checks,
-history, delivery. See references/records.md. A template is never evidence. -->
+## Out of scope
+
+What the agent must not change.
+
+<!-- Optional frontmatter: depends_on, blocked_reason, cancelled_reason, checks.
+See references/records.md. A template is never evidence. -->

@@ -1,16 +1,16 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { mkdtemp, readFile, writeFile, mkdir, symlink, link, cp, rm, stat, readdir } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile, mkdir, symlink, link, cp, rm, stat, readdir, chmod } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { stringify } from 'yaml';
-import { configDefaults, locateConfig, parseConfig, pathIssue, validateConfig, type ProjectConfig } from '../src/validation/config.js';
-import { localLinkErrors, parseFrontmatter, parseRecords, readRecordFiles, transitionErrors, validateProjectRecords } from '../src/validation/records.js';
-import { computeSnapshot } from '../src/validation/git.js';
+import { locateConfig, parseConfig, pathIssue, validateConfig, type ProjectConfig } from '../src/validation/config.js';
+import { localLinkErrors, parseFrontmatter, parseRecords, readRecordFiles, validateProjectRecords } from '../src/validation/records.js';
 import { validateRepository } from '../src/validation/repository.js';
 import { mappings, skills, syncAssets } from '../src/packaging/sync-assets.js';
-import { prepareHostPackage, preflightHostPackage, hostRoots } from '../src/packaging/hosts.js';
+import { hostIds, hostTargets, type HostId } from '../src/packaging/hosts.js';
+import { END, START, applyInstall, conflicts, mergeSection, pending, planInstall } from '../src/packaging/install.js';
 import { createUsageRecord, formatUsageFooter, parseAgentUsage, summarizeUsage } from '../src/usage/usage.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -38,29 +38,24 @@ async function markdownFilesForTest(directory: string): Promise<string[]> {
   return contents.flat();
 }
 
-// v2 record fixtures --------------------------------------------------------
+// Record fixtures -----------------------------------------------------------
 
 type Data = Record<string, unknown>;
 type Check = Record<string, unknown>;
-const minimal: ProjectConfig = { schema: 'beligent-sdd/config/v2', hosts: ['codex'] };
-const A = `git-tree:${'a'.repeat(40)}`;
-const B = `git-tree:${'b'.repeat(40)}`;
-const dirs = { TICKET: 'tickets', EPIC: 'epics', SPEC: 'specs' } as const;
-const criteria = (...ids: string[]): string => `# Record\n\n## Acceptance criteria\n\n${ids.map((id) => `### ${id}\n\n${id} behaves.\n`).join('\n')}`;
+const minimal: ProjectConfig = { schema: 'beligent-sdd/config', hosts: ['codex'] };
+const body = (...ids: string[]): string => `# Ticket\n\n## Context\n\nWhy.\n\n## Requirements\n\nBuild the behavior.\n\n## Acceptance criteria\n\n${ids.map((id) => `### ${id}\n\n${id} behaves.\n`).join('\n')}\n## Out of scope\n\nEverything else.\n`;
 
 function ticket(overrides: Data = {}): Data {
-  return { schema: 'beligent-sdd/ticket/v2', id: 'TICKET-001', title: 'Fix the label', status: 'todo', revision: 1, ...overrides };
+  return { schema: 'beligent-sdd/ticket', id: 'TICKET-001', title: 'Fix the label', status: 'todo', ...overrides };
 }
 function passing(overrides: Check = {}): Check {
-  return { id: 'regression', criteria: ['AC-001'], required: true, command: 'npm test', coverage: 'added', outcome: 'pass', revision: 1, snapshot: A, ...overrides };
+  return { id: 'regression', criteria: ['AC-001'], command: 'npm test', outcome: 'pass', ...overrides };
 }
 function done(overrides: Data = {}, checks: Check[] = [passing()]): Data {
-  return ticket({ status: 'done', implementation: { base: '778afa1', snapshot: A }, checks, ...overrides });
+  return ticket({ status: 'done', checks, ...overrides });
 }
-function file(data: Data, body = criteria('AC-001')): { file: string; text: string } {
-  const id = String(data.id);
-  const prefix = id.split('-')[0] as keyof typeof dirs;
-  return { file: `.sdd/beligent/${dirs[prefix] ?? 'tickets'}/${id}.md`, text: `---\n${stringify(data)}---\n${body}` };
+function file(data: Data, text = body('AC-001')): { file: string; text: string } {
+  return { file: `.sdd/beligent/tickets/${String(data.id)}.md`, text: `---\n${stringify(data)}---\n${text}` };
 }
 async function writeProject(records: Array<{ file: string; text: string }>, config: ProjectConfig = minimal, project?: string): Promise<string> {
   const target = project ?? await tempdir();
@@ -76,17 +71,10 @@ async function errorsFor(records: Array<{ file: string; text: string }>, config:
   const project = await writeProject(records, config);
   return (await validateProjectRecords(project, config)).join('\n');
 }
-function spec(id = 'SPEC-001', ids = ['AC-001', 'AC-002'], status = 'active'): { file: string; text: string } {
-  return file({ schema: 'beligent-sdd/spec/v2', id, title: 'Shared behavior', status }, criteria(...ids));
-}
-function epic(status = 'todo'): { file: string; text: string } {
-  return file({ schema: 'beligent-sdd/epic/v2', id: 'EPIC-001', title: 'Outcome', status }, '# Outcome\n');
-}
-function records(...entries: Array<{ file: string; text: string }>) { return parseRecords(entries).records; }
 
 // Tests ----------------------------------------------------------------------
 
-describe('v2 configuration', () => {
+describe('configuration', () => {
   async function template(): Promise<Data> {
     return JSON.parse(await readFile(path.join(root, 'skills/sdd-init/assets/config.json'), 'utf8')) as Data;
   }
@@ -95,23 +83,21 @@ describe('v2 configuration', () => {
     const config = await template();
     expect(validateConfig(config, true)).toEqual([]);
     expect(validateConfig(config).map((issue) => issue.message).join(' ')).toContain('unrendered');
-    expect(config).toMatchObject({ tracking: { authorization: configDefaults.tracking.authorization }, delivery: configDefaults.delivery });
+    expect(Object.keys(config).sort()).toEqual(['checks', 'hosts', 'project', 'schema', 'stacks']);
   });
 
   it('accepts a minimal and a full configuration', () => {
     expect(validateConfig(minimal)).toEqual([]);
     expect(validateConfig({
-      schema: 'beligent-sdd/config/v2', hosts: ['claude-code', 'codex', 'github-copilot', 'cursor', 'devin'], project: { name: 'DPP' },
+      schema: 'beligent-sdd/config', hosts: ['claude-code', 'codex', 'github-copilot', 'cursor'], project: { name: 'DPP' },
       stacks: ['nextjs', 'react-typescript'], checks: [{ id: 'unit', command: 'npm test', required: true }, { id: 'e2e', command: 'npm run e2e' }],
-      tracking: { required_for: ['database migrations'], authorization: 'recorded' },
-      delivery: { commit: 'allowed', push: 'ask', pull_request: 'never', delivered_at: 'push' },
     })).toEqual([]);
   });
 
   it.each([
-    [{ schema_version: 1, hosts: ['codex'] }, 'earlier Beligent schema (schema_version 1)'],
-    [{ schema_version: 2, schema: 'beligent-sdd/config/v2', hosts: ['codex'] }, 'earlier Beligent schema (schema_version 2)'],
-    [{ hosts: ['codex'], tracking: { mode: 'opt-in' } }, 'no "schema" marker, so it predates v2'],
+    [{ schema_version: 1, hosts: ['codex'] }, 'earlier Beligent SDD schema (schema_version 1)'],
+    [{ schema_version: 2, schema: 'beligent-sdd/config', hosts: ['codex'] }, 'earlier Beligent SDD schema (schema_version 2)'],
+    [{ hosts: ['codex'], tracking: { mode: 'opt-in' } }, 'no "schema" marker, so it predates Beligent SDD 1.0'],
     [{ schema: 'beligent-sdd/config/v3', hosts: ['codex'] }, 'Unsupported schema "beligent-sdd/config/v3"'],
   ])('rejects an earlier or unknown schema with an actionable message: %j', (input, message) => {
     const before = structuredClone(input);
@@ -125,17 +111,19 @@ describe('v2 configuration', () => {
   it.each([
     { ...minimal, unexpected: true },
     { ...minimal, hosts: [] },
-    { ...minimal, hosts: ['my-agent'] },
     { ...minimal, stacks: ['rails'] },
     { ...minimal, checks: [{ id: 'Unit', command: 'npm test' }] },
     { ...minimal, checks: [{ id: 'unit' }] },
-    { ...minimal, tracking: { mode: 'always' } },
-    { ...minimal, tracking: { authorization: 'manager' } },
-    { ...minimal, delivery: { push: 'maybe' } },
-    { ...minimal, delivery: { delivered_at: 'deploy' } },
+    { ...minimal, tracking: { authorization: 'request' } },
+    { ...minimal, delivery: { commit: 'ask' } },
     { ...minimal, project: { name: 'x', type: 'app' } },
   ])('rejects invalid values and unknown keys %#', (input) => {
     expect(validateConfig(input).length).toBeGreaterThan(0);
+  });
+
+  it('accepts host names the framework does not support, so they can be ignored', () => {
+    expect(validateConfig({ ...minimal, hosts: ['codex', 'my-agent'] })).toEqual([]);
+    expect(validateConfig({ ...minimal, hosts: [''] }).length).toBeGreaterThan(0);
   });
 
   it('rejects duplicate check ids, duplicate JSON keys and invalid JSON', () => {
@@ -145,12 +133,12 @@ describe('v2 configuration', () => {
     expect(() => parseConfig('{"x":NaN}')).toThrow();
   });
 
-  it('locates the v2 configuration and explains a missing or pre-v2 setup', async () => {
+  it('locates the configuration and explains a missing or pre-1.0 setup', async () => {
     const project = await tempdir();
     expect(locateConfig(project)).toEqual({ issue: expect.stringContaining('.sdd/beligent/config.json is missing') as string });
     await mkdir(path.join(project, '.beligent'));
     await writeFile(path.join(project, '.beligent/config.json'), '{"schema_version":2}');
-    expect(locateConfig(project)).toEqual({ issue: expect.stringContaining('Pre-v2 Beligent setup found at .beligent/') as string });
+    expect(locateConfig(project)).toEqual({ issue: expect.stringContaining('Pre-1.0 Beligent SDD setup found at .beligent/') as string });
     await writeProject([], minimal, project);
     expect(locateConfig(project)).toEqual({ path: path.join(project, '.sdd/beligent/config.json') });
   });
@@ -171,53 +159,46 @@ describe('v2 configuration', () => {
   });
 });
 
-describe('v2 records', () => {
-  it('accepts a minimal open ticket and a standalone done ticket without epic, spec, approval or delivery', async () => {
+describe('tickets', () => {
+  it('accepts a minimal open ticket and a done ticket with passing checks', async () => {
     expect(await errorsFor([file(ticket())])).toBe('');
     expect(await errorsFor([file(done())])).toBe('');
   });
 
-  it('accepts tickets that use an optional epic and a shared spec', async () => {
-    const member = (id: string, criterion: string) => file(done({ id, epic: 'EPIC-001', spec_criteria: [criterion] }, [passing({ criteria: [criterion] })]), '# Shared\n');
-    expect(await errorsFor([spec(), epic('done'), member('TICKET-001', 'SPEC-001/AC-001'), member('TICKET-002', 'SPEC-001/AC-002')])).toBe('');
-    expect(await errorsFor([spec(), epic('done'), member('TICKET-001', 'SPEC-001/AC-001'), file(ticket({ id: 'TICKET-002', epic: 'EPIC-001' }))])).toContain('a done epic needs member tickets that are all done or cancelled');
-    expect(await errorsFor([epic('done')])).toContain('a done epic needs member tickets');
+  it('requires defined requirements and criteria with text', async () => {
+    expect(await errorsFor([file(ticket(), body('AC-001').replace('Build the behavior.', ''))])).toContain('needs a nonempty ## Requirements section');
+    expect(await errorsFor([file(ticket(), '# No sections\n')])).toContain('needs at least one ### AC-001 criterion');
+    expect(await errorsFor([file(ticket(), body('AC-001').replace('AC-001 behaves.', ''))])).toContain('AC-001 needs text describing an observable result');
+    expect(await errorsFor([file(ticket(), body('AC-001', 'AC-001'))])).toContain('duplicate criterion headings');
+    expect(await errorsFor([file(ticket(), body('AC-001').replace('Build the behavior.', '<!-- fill in -->\n```\nexample\n```'))])).toContain('needs a nonempty ## Requirements section');
+    expect(await errorsFor([file(ticket(), body('AC-001').replace(/\n/g, '\r\n'))])).toBe('');
   });
 
-  it('requires local criteria and listed spec criteria together', async () => {
-    const record = done({ spec_criteria: ['SPEC-001/AC-001'] }, [passing({ criteria: ['SPEC-001/AC-001'] })]);
-    expect(await errorsFor([spec(), file(record)])).toContain('no passing current required check covers TICKET-001/AC-001');
-    const both = done({ spec_criteria: ['SPEC-001/AC-001'] }, [passing({ criteria: ['AC-001', 'SPEC-001/AC-001'] })]);
-    expect(await errorsFor([spec(), file(both)])).toBe('');
-  });
-
-  it('resolves spec references for open tickets only, so later spec edits never break done tickets', async () => {
-    expect(await errorsFor([file(ticket({ spec_criteria: ['SPEC-009/AC-001'] }))])).toContain('unresolved spec SPEC-009');
-    expect(await errorsFor([spec(), file(ticket({ spec_criteria: ['SPEC-001/AC-009'] }))])).toContain('unresolved spec criterion SPEC-001/AC-009');
-    const closed = done({ spec_criteria: ['SPEC-001/AC-002'] }, [passing({ criteria: ['SPEC-001/AC-002'] })]);
-    expect(await errorsFor([spec('SPEC-001', ['AC-001']), file(closed, '# Done\n')])).toBe('');
-    expect(await errorsFor([file(done({}, [passing({ criteria: ['SPEC-001/AC-001'] })]))])).toContain('not one of this ticket\'s criteria');
-  });
-
-  it('enforces identity, markers and fixed record locations', async () => {
-    const renamed = { ...file(ticket()), file: '.sdd/beligent/tickets/label-fix.md' };
-    expect(await errorsFor([renamed])).toContain('file name must be TICKET-001.md');
+  it('enforces identity, markers and the single ticket folder', async () => {
+    expect(await errorsFor([{ ...file(ticket()), file: '.sdd/beligent/tickets/label-fix.md' }])).toContain('file name must be TICKET-001.md');
     expect(await errorsFor([file(ticket({ id: 'TICKET-1' }))])).toContain('id must look like TICKET-001');
-    const legacy = { file: '.sdd/beligent/tickets/TICKET-001.md', text: '---\nid: TICKET-001\nkind: ticket\nstatus: todo\nreadiness: ready\napproval_refs: []\n---\n# Old\n' };
-    expect(await errorsFor([legacy])).toContain('pre-v2 record (no schema marker). Recreate it from the v2 template');
-    expect(await errorsFor([file(ticket({ readiness: 'ready', priority: 'high' }))])).toContain('unknown fields readiness, priority');
-    expect(await errorsFor([{ ...file(ticket()), text: file(ticket()).text.replace('ticket/v2', 'epic/v2') }])).toContain('expected schema "beligent-sdd/ticket/v2"');
-    expect(await errorsFor([{ ...file(ticket()), file: '.sdd/beligent/tickets/archive/TICKET-001.md' }])).toContain('records live directly in .sdd/beligent/tickets/');
-    expect(await errorsFor([file(ticket(), '# No criteria\n')])).toContain('needs at least one ### AC-001 criterion');
-    expect(await errorsFor([file(ticket(), criteria('AC-001', 'AC-001'))])).toContain('duplicate criterion headings');
-    expect(await errorsFor([file(ticket({ revision: true }))])).toContain('revision must be a positive integer');
+    const legacy = { file: '.sdd/beligent/tickets/TICKET-001.md', text: '---\nid: TICKET-001\nkind: ticket\nstatus: todo\n---\n# Old\n' };
+    expect(await errorsFor([legacy])).toContain('pre-1.0 record (no schema marker). Recreate it from the current template');
+    expect(await errorsFor([file(ticket({ schema: 'beligent-sdd/ticket/v2' }))])).toContain('expected schema "beligent-sdd/ticket"');
+    for (const field of ['revision', 'epic', 'spec_criteria', 'authorization', 'implementation', 'history', 'delivery']) {
+      expect(await errorsFor([file(ticket({ [field]: 1 }))])).toContain(`unknown fields ${field}`);
+    }
+    expect(await errorsFor([{ ...file(ticket()), file: '.sdd/beligent/tickets/archive/TICKET-001.md' }])).toContain('tickets are regular .md files directly in .sdd/beligent/tickets/');
+    expect(await errorsFor([{ file: '.sdd/beligent/tickets/TICKET-002.markdown', text: 'x' }])).toContain('TICKET-002.markdown: tickets are regular .md files');
+    expect(await errorsFor([{ file: '.sdd/beligent/specs/SPEC-001.md', text: 'x' }])).toContain('.sdd/beligent/specs/: epics and specs are no longer used');
   });
 
-  it('validates dependencies, epics and status reasons', async () => {
+  it('reports a symlinked ticket instead of skipping it', async () => {
+    const project = await writeProject([file(ticket())]);
+    await symlink(path.join(project, '.sdd/beligent/tickets/TICKET-001.md'), path.join(project, '.sdd/beligent/tickets/TICKET-002.md'));
+    expect((await validateProjectRecords(project, minimal)).join('\n')).toContain('TICKET-002.md: tickets are regular .md files');
+  });
+
+  it('validates dependencies and status reasons, and treats a removed dependency as satisfied', async () => {
     expect(await errorsFor([file(ticket({ depends_on: ['TICKET-001'] }))])).toContain('cannot depend on itself');
     expect(await errorsFor([file(ticket({ depends_on: ['TICKET-002'] })), file(ticket({ id: 'TICKET-002', depends_on: ['TICKET-001'] }))])).toContain('Dependency cycle');
-    expect(await errorsFor([file(ticket({ depends_on: ['TICKET-404'] }))])).toContain('unresolved dependency TICKET-404');
-    expect(await errorsFor([file(ticket({ epic: 'EPIC-404' }))])).toContain('unresolved epic EPIC-404');
+    expect(await errorsFor([file(ticket({ depends_on: ['TICKET-404'] }))])).toBe('');
+    expect(await errorsFor([file(ticket({ depends_on: ['EPIC-001'] }))])).toContain('depends_on must list ticket IDs');
     expect(await errorsFor([file(ticket({ status: 'blocked' }))])).toContain('blocked requires blocked_reason');
     expect(await errorsFor([file(ticket({ status: 'blocked', blocked_reason: 'Staging API is down' }))])).toBe('');
     expect(await errorsFor([file(ticket({ blocked_reason: 'stale' }))])).toContain('blocked_reason is only valid when status is blocked');
@@ -225,162 +206,105 @@ describe('v2 records', () => {
     expect(await errorsFor([file(ticket({ status: 'review' }))])).toContain('status must be one of');
   });
 
-  it.each(['fail', 'blocked', 'not-run'])('keeps a ticket open while a required check is %s', async (outcome) => {
-    expect(await errorsFor([file(done({}, [passing({ outcome })]))])).toContain(`required check 'regression' is ${outcome}; the ticket stays open`);
+  it.each(['fail', 'blocked', 'not-run'])('keeps a ticket open while a check is %s', async (outcome) => {
+    expect(await errorsFor([file(done({}, [passing({ outcome })]))])).toContain(`check 'regression' is ${outcome}; the ticket stays open`);
     expect(await errorsFor([file(done({ status: 'in-progress' }, [passing({ outcome })]))])).toBe('');
   });
 
-  it('requires a current snapshot, revision and coverage for every criterion before done', async () => {
-    expect(await errorsFor([file(done({ implementation: undefined }))])).toContain('done requires implementation');
-    expect(await errorsFor([file(done({ implementation: { base: 'x', snapshot: 'sha256:abc' } }))])).toContain('implementation needs base');
-    expect(await errorsFor([file(done({}, [passing({ snapshot: B })]))])).toContain("required check 'regression' is stale");
-    expect(await errorsFor([file(done({ revision: 2, history: [{ event: 'revised', revision: 1, reason: 'Added AC-002' }] }))])).toContain('is stale');
-    expect(await errorsFor([file(done(), criteria('AC-001', 'AC-002'))])).toContain('no passing current required check covers TICKET-001/AC-002');
-    expect(await errorsFor([file(done({}, [passing({ required: false })]))])).toContain('no passing current required check covers TICKET-001/AC-001');
-    expect(await errorsFor([file(done({ checks: undefined }))])).toContain('no passing current required check');
-    expect(await errorsFor([file(done({}, [passing({ coverage: undefined })]))])).toContain('coverage must be added, updated or existing');
+  it('requires a passing check for every criterion before done', async () => {
+    expect(await errorsFor([file(done(), body('AC-001', 'AC-002'))])).toContain('no passing check covers AC-002');
+    expect(await errorsFor([file(done({ checks: undefined }))])).toContain('no passing check covers AC-001');
+    expect(await errorsFor([file(done({}, [passing({ criteria: ['TICKET-001/AC-001'] })]))])).toContain("references TICKET-001/AC-001, which is not one of this ticket's criteria");
   });
 
-  it('requires configured required checks to pass for every closure', async () => {
+  it('requires configured required checks to pass and record their configured command', async () => {
     const config: ProjectConfig = { ...minimal, checks: [{ id: 'unit', command: 'npm test', required: true }, { id: 'e2e', command: 'npm run e2e' }] };
-    expect(await errorsFor([file(done())], config)).toContain("configured required check 'unit' has no passing current result");
-    const unit = { id: 'unit', required: true, command: 'npm test', outcome: 'pass', revision: 1, snapshot: A };
+    expect(await errorsFor([file(done())], config)).toContain("required project check 'unit' has no passing result");
+    const unit = { id: 'unit', command: 'npm test', outcome: 'pass' };
     expect(await errorsFor([file(done({}, [passing(), unit]))], config)).toBe('');
+    expect(await errorsFor([file(done({}, [passing(), { ...unit, command: 'true' }]))], config)).toContain("must record the configured command 'npm test'");
     expect(await errorsFor([file(done({}, [passing(), { ...unit, id: 'lint' }]))], config)).toContain("check 'lint' needs criteria or must match a configured check id");
   });
 
-  it('requires recorded authorization for the current revision when the project asks for it', async () => {
-    const config: ProjectConfig = { ...minimal, tracking: { authorization: 'recorded' } };
-    const authorization = { revision: 1, by: 'Dana Lee', source: 'PR #117 comment' };
-    expect(await errorsFor([file(ticket())], config)).toBe('');
-    expect(await errorsFor([file(ticket({ status: 'in-progress' }))], config)).toContain('requires recorded authorization');
-    expect(await errorsFor([file(done({ authorization: { ...authorization, revision: 2 } }))], config)).toContain('requires recorded authorization');
-    expect(await errorsFor([file(done({ authorization }))], config)).toBe('');
-    expect(await errorsFor([file(ticket({ authorization: { by: 'Dana' } }))])).toContain('authorization needs revision, by and source');
-  });
-
-  it('records manual checks with observations and a reason when automation is not practical', async () => {
-    const manual = { id: 'ios-visual', criteria: ['AC-001'], required: true, procedure: 'Open /passport at 320px', observed: 'Label wraps', by: 'assistant', outcome: 'pass', revision: 1, snapshot: A };
-    expect(await errorsFor([file(done({}, [manual]))])).toContain('verified only manually; give a reason');
-    expect(await errorsFor([file(done({}, [{ ...manual, reason: 'Layout needs a real browser' }]))])).toBe('');
-    expect(await errorsFor([file(done({}, [passing(), manual]))])).toBe('');
-    expect(await errorsFor([file(done({}, [{ ...manual, observed: undefined }]))])).toContain('is manual and needs observed and by');
+  it('records manual checks with what was observed', async () => {
+    const manual = { id: 'ios-visual', criteria: ['AC-001'], procedure: 'Open /passport at 320px', observed: 'Label wraps', outcome: 'pass' };
+    expect(await errorsFor([file(done({}, [manual]))])).toBe('');
+    expect(await errorsFor([file(done({}, [{ ...manual, observed: undefined }]))])).toContain('is manual and needs observed');
     expect(await errorsFor([file(done({}, [{ ...manual, command: 'npm test' }]))])).toContain('exactly one of command or procedure');
-    expect(await errorsFor([file(done({}, [passing(), { ...manual, snapshot: B, carried_forward: 'Only server code changed since' }]))])).toBe('');
-    expect(await errorsFor([file(done({}, [passing({ snapshot: B, carried_forward: 'unchanged' })]))])).toContain('carried_forward is only for manual checks');
   });
 
-  it('validates optional, not-applicable and malformed checks', async () => {
-    expect(await errorsFor([file(done({}, [passing(), passing({ id: 'perf', required: false, outcome: 'fail' })]))])).toBe('');
-    expect(await errorsFor([file(done({}, [passing(), passing({ id: 'a11y', required: false, outcome: 'not-applicable', reason: 'No UI change' })]))])).toBe('');
-    expect(await errorsFor([file(done({}, [passing({ outcome: 'not-applicable', reason: 'x' })]))])).toContain('not-applicable only when optional');
+  it('rejects malformed and retired check fields', async () => {
     expect(await errorsFor([file(done({}, [passing(), passing()]))])).toContain('duplicate check ids');
-    expect(await errorsFor([file(done({}, [passing({ tests: ['../outside.test.ts'] })]))])).toContain('test path ../outside.test.ts must be a safe project-relative POSIX path');
-    expect(await errorsFor([file(done({}, [passing({ before: 'pass' })]))])).toContain('before can only be fail');
-    expect(await errorsFor([file(done({}, [passing({ revision: 3 })]))])).toContain('needs the ticket revision it verified');
-    expect(await errorsFor([file(done({}, [passing({ at: 'yesterday' })]))])).toContain('at must be an ISO date-time');
-    expect(await errorsFor([file(done({}, [passing({ extra: 1 })]))])).toContain('unknown fields extra');
-    expect(await errorsFor([file(done({ history: [{ event: 'revised', revision: 1, reason: 'x' }] }))])).toContain('history entries need event: revised, an earlier revision');
-  });
-
-  it('keeps delivery independent of completion while validating declared delivery facts', async () => {
-    expect(await errorsFor([file(ticket({ delivery: { state: 'pr-open', reference: 'https://example.test/pull/1' } }))])).toBe('');
-    expect(await errorsFor([file(done({ delivery: { state: 'blocked', reason: 'Push permission pending' } }))])).toBe('');
-    expect(await errorsFor([file(done({ delivery: { state: 'committed' } }))])).toContain('delivery committed needs an observed reference');
-    expect(await errorsFor([file(done({ delivery: { state: 'delivered', reference: 'abc', point: 'commit' } }))])).toContain("configured delivery point 'merged-pr'");
-    expect(await errorsFor([file(done({ delivery: { state: 'delivered', reference: 'abc', point: 'push' } }))], { ...minimal, delivery: { delivered_at: 'push' } })).toBe('');
-    expect(await errorsFor([file(done({ delivery: { state: 'ready-for-delivery' } }))])).toContain('delivery.state must be');
+    expect(await errorsFor([file(done({}, [passing({ outcome: 'not-applicable' })]))])).toContain('outcome must be pass, fail, blocked, not-run');
+    expect(await errorsFor([file(done({}, [passing({ id: 'Bad id' })]))])).toContain('check id must be lowercase');
+    for (const field of ['required', 'snapshot', 'revision', 'coverage', 'before', 'tests', 'at', 'by', 'carried_forward', 'reason']) {
+      expect(await errorsFor([file(done({}, [passing({ [field]: 'x' })]))])).toContain(`has unknown fields ${field}`);
+    }
   });
 });
 
-describe('final states and revisions between record versions', () => {
-  const base = file(ticket({ status: 'in-progress' }));
-  it('treats done and cancelled as final except for delivery', () => {
-    const closed = file(done());
-    expect(transitionErrors(records(closed), records(file(done({ status: 'todo' }))))).toEqual([expect.stringContaining('TICKET-001: done is final; only delivery may change')]);
-    expect(transitionErrors(records(closed), records(file(done(), criteria('AC-001', 'AC-002'))))).toHaveLength(1);
-    expect(transitionErrors(records(closed), records(file(done({ delivery: { state: 'pushed', reference: 'abc' } }))))).toEqual([]);
-    expect(transitionErrors(records(closed), [])).toEqual(['TICKET-001: a done record cannot be deleted']);
-    const cancelled = file(ticket({ status: 'cancelled', cancelled_reason: 'Out of scope' }));
-    expect(transitionErrors(records(cancelled), records(file(ticket())))).toEqual([expect.stringContaining('cancelled is final')]);
-    expect(transitionErrors(records(epic('done')), records(epic('todo')))).toEqual([expect.stringContaining('EPIC-001: done is final')]);
-  });
+describe('ticket lifecycle with real checks', () => {
+  const buggy = 'export const label = (value) => String(value ?? "").trim();\n';
+  const fixed = 'export const label = (value) => String(value ?? "").trim() || "Passport";\n';
+  const regression = 'import test from "node:test";\nimport assert from "node:assert/strict";\nimport { label } from "./app.mjs";\n\ntest("blank labels default to Passport", () => assert.equal(label("  "), "Passport"));\n';
+  const command = 'node --test label.test.mjs';
+  const config: ProjectConfig = { ...minimal, checks: [{ id: 'test', command, required: true }] };
+  const run = (cwd: string) => spawnSync(process.execPath, ['--test', 'label.test.mjs'], { cwd, encoding: 'utf8' }).status === 0 ? 'pass' : 'fail';
+  const record = (project: string, status: string, outcome: string) => writeFile(path.join(project, '.sdd/beligent/tickets/TICKET-001.md'), file(ticket({
+    status, checks: [{ id: 'label-regression', criteria: ['AC-001'], command, outcome }, { id: 'test', command, outcome }],
+  })).text);
 
-  it('requires a revision and preserved history when open criteria change', () => {
-    const changed = (data: Data) => records(file(ticket({ status: 'in-progress', ...data }), criteria('AC-001', 'AC-002')));
-    expect(transitionErrors(records(base), changed({}))).toEqual(['TICKET-001: criteria changed without incrementing revision']);
-    expect(transitionErrors(records(base), changed({ revision: 2 }))).toEqual(['TICKET-001: revision 2 needs a revised history entry for revision 1']);
-    const history = [{ event: 'revised', revision: 1, reason: 'Added AC-002', criteria: ['AC-001'] }];
-    expect(transitionErrors(records(base), changed({ revision: 2, history }))).toEqual([]);
-    expect(transitionErrors(changed({ revision: 2, history }), records(file(ticket({ status: 'in-progress', revision: 2 }), criteria('AC-001', 'AC-002'))))).toEqual(['TICKET-001: history entries must be preserved']);
-    expect(transitionErrors(changed({ revision: 2, history }), records(base))).toContain('TICKET-001: revision cannot decrease');
-    expect(transitionErrors(records(spec()), records(spec('SPEC-001', ['AC-001'])))).toEqual([]);
-    expect(transitionErrors(records(base), records(file(ticket({ status: 'done' }))))).toEqual([]);
+  it('keeps a failed or unrun check open and closes once the regression passes', async () => {
+    const project = await writeProject([file(ticket({ status: 'in-progress' }))], config);
+    await writeFile(path.join(project, 'app.mjs'), buggy);
+    await writeFile(path.join(project, 'label.test.mjs'), regression);
+    expect(run(project)).toBe('fail');
+    await record(project, 'done', 'fail');
+    const failed = cli(['validate', project]);
+    expect(failed.status).toBe(1);
+    expect(failed.stderr).toContain("check 'label-regression' is fail");
+    await record(project, 'in-progress', 'fail');
+    expect(cli(['validate', project]).status).toBe(0);
+    await record(project, 'done', 'not-run');
+    expect(cli(['validate', project]).stderr).toContain("check 'label-regression' is not-run");
+    await writeFile(path.join(project, 'app.mjs'), fixed);
+    expect(run(project)).toBe('pass');
+    await record(project, 'done', 'pass');
+    const closed = cli(['validate', project]);
+    expect(closed.status, closed.stderr).toBe(0);
   });
 });
 
-describe('Git snapshots and validate options', () => {
-  function git(cwd: string, ...args: string[]): string {
-    const result = spawnSync('git', args, { cwd, encoding: 'utf8' });
-    if (result.status !== 0) throw new Error(result.stderr);
-    return result.stdout.trim();
-  }
-  async function repository(): Promise<string> {
-    const project = await writeProject([file(ticket({ status: 'in-progress' }))]);
-    await writeFile(path.join(project, 'app.js'), 'export const label = "Passport";\n');
-    await writeFile(path.join(project, '.gitignore'), 'ignored.log\n');
-    git(project, 'init', '-q');
-    git(project, 'config', 'user.email', 'fixture@example.test');
-    git(project, 'config', 'user.name', 'Fixture');
-    git(project, 'add', '-A');
-    git(project, 'commit', '-q', '-m', 'fixture');
-    return project;
-  }
-
-  it('identifies the working tree without the records and without touching the index', async () => {
-    const project = await repository();
-    const first = computeSnapshot(project);
-    expect(first.base).toBe(git(project, 'rev-parse', 'HEAD'));
-    expect(first.snapshot).toMatch(/^git-tree:[0-9a-f]{40}$/);
-    expect(computeSnapshot(project)).toEqual(first);
-    const index = (await stat(path.join(project, '.git/index'), { bigint: true })).mtimeNs;
-    await writeFile(path.join(project, '.sdd/beligent/tickets/TICKET-001.md'), file(done()).text);
-    await writeFile(path.join(project, 'ignored.log'), 'noise');
-    expect(computeSnapshot(project).snapshot).toBe(first.snapshot);
-    await writeFile(path.join(project, 'app.js'), 'export const label = "Pass";\n');
-    const edited = computeSnapshot(project).snapshot;
-    expect(edited).not.toBe(first.snapshot);
-    await writeFile(path.join(project, 'new.test.js'), 'test');
-    expect(computeSnapshot(project).snapshot).not.toBe(edited);
-    expect((await stat(path.join(project, '.git/index'), { bigint: true })).mtimeNs).toBe(index);
-    expect(git(project, 'status', '--porcelain')).toContain('?? new.test.js');
+describe('packaging inventory', () => {
+  it('resolves to exactly the five canonical workflow skills and only the selected stack guides', async () => {
+    expect([...skills]).toEqual(['sdd-init', 'sdd-define', 'sdd-implement', 'sdd-audit', 'sdd-deliver']);
+    for (const { destination } of mappings()) expect(skills).toContain(destination.split('/')[1]);
+    const files = (await planInstall(root, await tempdir(), { hosts: ['codex', 'claude-code'], stacks: ['python'] })).entries.map((entry) => entry.path);
+    for (const skillRoot of ['.agents/skills', '.claude/skills']) {
+      expect(files.filter((file) => file.startsWith(`${skillRoot}/`) && file.endsWith('/SKILL.md')).map((file) => file.split('/')[2]).sort()).toEqual([...skills].sort());
+    }
+    expect(files.filter((file) => file.startsWith('.sdd/beligent/guidance/')).map((file) => file.replace('.sdd/beligent/guidance/', '')).sort()).toEqual(['python.md']);
   });
 
-  it('prints the snapshot and checks a recorded ticket snapshot against the working tree', async () => {
-    const project = await repository();
-    const printed = cli(['snapshot', project]);
-    expect(printed.status).toBe(0);
-    const snapshot = /snapshot: (\S+)/.exec(printed.stdout)![1]!;
-    await writeFile(path.join(project, '.sdd/beligent/tickets/TICKET-001.md'), file(done({ implementation: { base: 'abc', snapshot } }, [passing({ snapshot })])).text);
-    expect(cli(['validate', project, '--snapshot', 'TICKET-001']).status).toBe(0);
-    await writeFile(path.join(project, 'app.js'), 'changed\n');
-    const stale = cli(['validate', project, '--snapshot', 'TICKET-001']);
-    expect(stale.status).toBe(1);
-    expect(stale.stderr).toContain('does not match the working tree');
-    expect(cli(['snapshot', await tempdir()]).stderr).toContain('a Git working tree is required');
-  });
-
-  it('enforces final states against a Git revision with --since', async () => {
-    const project = await repository();
-    const record = path.join(project, '.sdd/beligent/tickets/TICKET-001.md');
-    await writeFile(record, file(done()).text);
-    git(project, 'commit', '-qam', 'close ticket');
-    expect(cli(['validate', project, '--since', 'HEAD']).status).toBe(0);
-    await writeFile(record, file(done({ status: 'in-progress' })).text);
-    const reopened = cli(['validate', project, '--since', 'HEAD']);
-    expect(reopened.status).toBe(1);
-    expect(reopened.stderr).toContain('done is final');
-    expect(cli(['validate', project, '--since', 'no-such-ref']).stderr).toContain("unknown Git revision 'no-such-ref'");
+  it('rejects an obsolete workflow skill, an entry point without the shared guidance and an auto-loading skill', async () => {
+    const copy = await tempdir();
+    await cp(root, copy, { recursive: true, filter: (source) => !/[/\\](?:node_modules|dist|\.git|temp change {2}md file)$/.test(source) });
+    expect(await validateRepository(copy)).toEqual([]);
+    await mkdir(path.join(copy, 'skills/develop-task'));
+    await writeFile(path.join(copy, 'skills/develop-task/SKILL.md'), '---\nname: develop-task\ndescription: Obsolete.\n---\n');
+    const entry = path.join(copy, 'skills/sdd-deliver/SKILL.md');
+    await writeFile(entry, (await readFile(entry, 'utf8')).replace('[shared contract](references/shared/governance.md)', 'shared contract'));
+    const define = path.join(copy, 'skills/sdd-define/SKILL.md');
+    await writeFile(define, (await readFile(define, 'utf8')).replace('disable-model-invocation: true\n', ''));
+    await rm(path.join(copy, 'skills/sdd-audit/agents/openai.yaml'));
+    const setup = path.join(copy, 'skills/sdd-init/references/setup.md');
+    await writeFile(setup, (await readFile(setup, 'utf8')).replace('| `cursor` |', '| cursor |'));
+    const errors = (await validateRepository(copy)).join('\n');
+    expect(errors).toContain('host table must list `cursor` with skill root `.agents/skills`');
+    expect(errors).toContain('Expected five core skills; found develop-task');
+    expect(errors).toContain('sdd-deliver: entrypoint must link the shared guidance');
+    expect(errors).toContain('sdd-define: SKILL.md must set disable-model-invocation: true');
+    expect(errors).toContain('sdd-audit: agents/openai.yaml is missing');
   });
 });
 
@@ -465,6 +389,13 @@ describe('repository validation', () => {
     expect((await localLinkErrors(path.join(dir, 'page.md'), dir)).some((error) => error.includes('missing local anchor'))).toBe(true);
   });
 
+  it('keeps documented configuration examples valid', async () => {
+    for (const doc of ['README.md']) {
+      const blocks = [...(await readFile(path.join(root, doc), 'utf8')).matchAll(/```json\n([\s\S]*?)```/g)].map((match) => match[1]!);
+      for (const block of blocks.filter((text) => text.includes('beligent-sdd/config'))) expect(validateConfig(parseConfig(block)), doc).toEqual([]);
+    }
+  });
+
   it('validates the copied Copilot fragment from its eventual project destination', async () => {
     const project = await writeProject([]);
     await writeFile(path.join(project, 'AGENTS.md'), '# Existing instructions\n');
@@ -512,7 +443,8 @@ describe('CLI', () => {
     expect(version.stdout.trim()).toBe('1.0.0');
     expect(cli(['unknown']).status).toBe(2);
     expect(cli(['validate', '--unknown']).status).toBe(2);
-    expect(cli(['validate', '--since']).status).toBe(2);
+    expect(cli(['validate', '--since', 'main']).status).toBe(2);
+    expect(cli(['snapshot']).status).toBe(2);
     expect(cli(['validate', '--config', 'x.json']).status).toBe(2);
   });
 
@@ -564,7 +496,7 @@ describe('CLI', () => {
     expect(await readFile(store, 'utf8')).not.toContain('private prompt');
   });
 
-  it('validates a project and rejects invalid records, pre-v2 locations and earlier schemas', async () => {
+  it('validates a project and rejects invalid records, pre-1.0 locations and earlier schemas', async () => {
     const project = await writeProject([file(done())]);
     expect(cli(['validate', project]).status).toBe(0);
     expect(cli(['validate'], project).status).toBe(0);
@@ -573,13 +505,13 @@ describe('CLI', () => {
     expect(failing.status).toBe(1);
     expect(failing.stderr).toContain('the ticket stays open');
     await writeFile(path.join(project, '.sdd/beligent/config.json'), JSON.stringify({ hosts: ['codex'] }));
-    expect(cli(['validate', project]).stderr).toContain('predates v2');
+    expect(cli(['validate', project]).stderr).toContain('predates Beligent SDD 1.0');
     const legacy = await tempdir();
     await mkdir(path.join(legacy, '.beligent'));
     await writeFile(path.join(legacy, '.beligent/config.json'), '{"schema_version":2}');
     const result = cli(['validate', legacy]);
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain('Pre-v2 Beligent setup found at .beligent/');
+    expect(result.stderr).toContain('Pre-1.0 Beligent SDD setup found at .beligent/');
     expect(await readFile(path.join(legacy, '.beligent/config.json'), 'utf8')).toBe('{"schema_version":2}');
   });
 
@@ -592,7 +524,7 @@ describe('CLI', () => {
     expect(await readdir(project)).toEqual([]);
   });
 
-  it('doctor summarizes a valid config, installed skills, duplicates and pre-v2 leftovers', async () => {
+  it('doctor summarizes a valid config, installed skills, duplicates and pre-1.0 leftovers', async () => {
     const project = await writeProject([], { ...minimal, stacks: ['nodejs'] });
     for (const destination of ['.agents/skills/sdd-implement', '.claude/skills/sdd-implement', '.agents/skills/develop-task']) {
       await mkdir(path.join(project, destination), { recursive: true });
@@ -601,66 +533,264 @@ describe('CLI', () => {
     await mkdir(path.join(project, '.beligent'));
     const result = cli(['doctor', project]);
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain('OK configuration: hosts codex; stacks nodejs; authorization request');
+    expect(result.stdout).toContain('OK configuration: hosts codex; stacks nodejs; checks none');
     expect(result.stderr).toContain('duplicate discovery risk: sdd-implement');
-    expect(result.stderr).toContain('pre-v2 skill .agents/skills/develop-task');
-    expect(result.stderr).toContain('pre-v2 .beligent/ directory found');
+    expect(result.stderr).toContain('pre-1.0 skill .agents/skills/develop-task');
+    expect(result.stderr).toContain('pre-1.0 .beligent/ directory found');
     expect(result.stderr).toContain('sdd-deliver');
   });
 });
 
-describe('selected host package plans', () => {
-  it.each(Object.keys(hostRoots) as (keyof typeof hostRoots)[])('copies only selected %s integration and shared guidance, twice without rewriting', async (host) => {
+describe('host installation', () => {
+  async function install(project: string, options: Parameters<typeof planInstall>[2] = {}) {
+    const plan = await planInstall(root, project, options);
+    return { plan, applied: await applyInstall(plan) };
+  }
+  async function snapshotTree(project: string): Promise<Map<string, { bytes: Buffer; mtime: bigint }>> {
+    const result = new Map<string, { bytes: Buffer; mtime: bigint }>();
+    const walk = async (relative: string): Promise<void> => {
+      for (const entry of await readdir(path.join(project, relative), { withFileTypes: true })) {
+        const child = path.join(relative, entry.name);
+        if (entry.isDirectory()) await walk(child);
+        else result.set(child, { bytes: await readFile(path.join(project, child)), mtime: (await stat(path.join(project, child), { bigint: true })).mtimeNs });
+      }
+    };
+    await walk('');
+    return result;
+  }
+  const sections = (text: string): number => text.split(START).length - 1;
+
+  it.each(hostIds)('installs the five skills and the %s instruction files into a fresh project', async (host: HostId) => {
     const project = await tempdir();
-    const files = await prepareHostPackage(root, [host], ['python']);
-    await writeFile(path.join(project, 'AGENTS.md'), 'Handwritten instructions\n');
-    expect(await preflightHostPackage(project, files)).toEqual([]);
-    for (const entry of files) { await mkdir(path.dirname(path.join(project, entry.path)), { recursive: true }); await writeFile(path.join(project, entry.path), entry.bytes); }
-    const sample = path.join(project, hostRoots[host], 'sdd-implement/SKILL.md');
-    const timestamp = (await stat(sample, { bigint: true })).mtimeNs;
-    expect(await preflightHostPackage(project, await prepareHostPackage(root, [host], ['python']))).toEqual([]);
-    expect((await stat(sample, { bigint: true })).mtimeNs).toBe(timestamp);
-    expect(await readFile(path.join(project, 'AGENTS.md'), 'utf8')).toBe('Handwritten instructions\n');
-    for (const skill of skills) expect(await readFile(path.join(project, hostRoots[host], skill, 'SKILL.md'))).toEqual(await readFile(path.join(root, 'skills', skill, 'SKILL.md')));
-    expect(await fileExists(path.join(project, '.sdd/beligent/tickets'))).toBe(false);
-    expect(await fileExists(path.join(project, '.sdd/beligent/guidance/python.md'))).toBe(true);
+    const { applied } = await install(project, { hosts: [host], stacks: ['python'] });
+    expect(applied.error).toBeUndefined();
+    const target = hostTargets[host];
+    for (const skill of skills) {
+      for (const document of await markdownFilesForTest(path.join(root, 'skills', skill))) {
+        const relative = path.relative(path.join(root, 'skills', skill), document);
+        expect(await readFile(path.join(project, target.skills, skill, relative))).toEqual(await readFile(document));
+      }
+    }
+    for (const bridge of target.instructions) expect(sections(await readFile(path.join(project, bridge), 'utf8'))).toBe(1);
+    for (const bridge of ['CLAUDE.md', '.github/copilot-instructions.md']) if (!(target.instructions as readonly string[]).includes(bridge)) expect(await fileExists(path.join(project, bridge))).toBe(false);
+    for (const other of ['.agents/skills', '.claude/skills']) if (other !== target.skills) expect(await fileExists(path.join(project, other))).toBe(false);
+    expect(await readFile(path.join(project, '.sdd/beligent/guidance/python.md'))).toEqual(await readFile(path.join(root, 'skills/sdd-implement/references/technology/python.md')));
+    expect(await fileExists(path.join(project, '.sdd/beligent/guidance/engineering.md'))).toBe(false);
     expect(await fileExists(path.join(project, '.sdd/beligent/guidance/nextjs.md'))).toBe(false);
-    for (const entry of files.filter((item) => item.path.startsWith('.sdd/beligent/guidance/'))) expect(await localLinkErrors(path.join(project, entry.path), project)).toEqual([]);
+    const config = JSON.parse(await readFile(path.join(project, '.sdd/beligent/config.json'), 'utf8')) as ProjectConfig;
+    expect(validateConfig(config)).toEqual([]);
+    expect(config.hosts).toEqual([host]);
+    for (const file of ['.sdd/beligent/setup-state.json', '.sdd/beligent/tickets']) expect(await fileExists(path.join(project, file))).toBe(false);
+    for (const file of (await markdownFilesForTest(path.join(project, '.sdd/beligent/guidance')))) expect(await localLinkErrors(file, project)).toEqual([]);
+    expect(cli(['doctor', project]).stdout).toContain('OK all five core skills are discoverable');
   });
 
-  it('deduplicates a shared Codex/Copilot root and refuses unreviewed content or unsafe paths', async () => {
+  it('replaces edited and old managed content and preserves project-owned files and text outside the section', async () => {
     const project = await tempdir();
-    const files = await prepareHostPackage(root, ['codex', 'github-copilot']);
-    expect(files.filter((entry) => entry.path.endsWith('/SKILL.md'))).toHaveLength(5);
-    const guide = files.find((entry) => entry.path.endsWith('guidance/engineering.md'))!;
-    await mkdir(path.dirname(path.join(project, guide.path)), { recursive: true });
-    await writeFile(path.join(project, guide.path), 'Local edited guidance');
-    expect((await preflightHostPackage(project, files)).join(' ')).toContain('reviewed merge');
-    expect((await preflightHostPackage(project, [{ path: '../escape', bytes: Buffer.from('x') }])).join(' ')).toContain('Unsafe');
+    await writeFile(path.join(project, 'AGENTS.md'), `# Team rules\n\n${START}\nOld Beligent text\n${END}\n\nKeep this footer.\n`);
+    await install(project, { hosts: ['codex'], stacks: ['python'] });
+    const skillFile = path.join(project, '.agents/skills/sdd-implement/SKILL.md');
+    const engineering = path.join(project, '.sdd/beligent/guidance/python.md');
+    await writeFile(skillFile, 'locally edited skill');
+    await writeFile(engineering, 'locally edited guidance');
+    await writeFile(path.join(project, '.agents/skills/sdd-implement/references/implementation.md'), 'file from an earlier package');
+    await writeFile(path.join(project, '.sdd/beligent/guidance/engineering.md'), 'guidance from an earlier version');
+    const owned = {
+      '.sdd/beligent/config.json': `${JSON.stringify({ ...minimal, stacks: ['python'], checks: [{ id: 'unit', command: 'npm test', required: true }] }, null, 2)}\n`,
+      '.sdd/beligent/tickets/TICKET-001.md': file(ticket()).text,
+      '.sdd/beligent/guidance/local-api.md': '# Local API rules\n',
+      '.agents/skills/team-helper/SKILL.md': '---\nname: team-helper\ndescription: Ours.\n---\n',
+    };
+    for (const [relative, text] of Object.entries(owned)) { await mkdir(path.dirname(path.join(project, relative)), { recursive: true }); await writeFile(path.join(project, relative), text); }
+    const agents = await readFile(path.join(project, 'AGENTS.md'), 'utf8');
+    await writeFile(path.join(project, 'AGENTS.md'), agents.replace('## Beligent SDD', '## Beligent SDD (edited)'));
+
+    const { plan, applied } = await install(project, {});
+    expect(applied.error).toBeUndefined();
+    expect(plan.notes.join(' ')).toContain('still holds engineering.md from an earlier version');
+    expect(await readFile(path.join(project, '.sdd/beligent/guidance/engineering.md'), 'utf8')).toBe('guidance from an earlier version');
+    const actions = Object.fromEntries(plan.entries.map((entry) => [entry.path, entry.action]));
+    expect(actions).toMatchObject({ '.agents/skills/sdd-implement/SKILL.md': 'replace', '.sdd/beligent/guidance/python.md': 'replace', '.agents/skills/sdd-implement/references/implementation.md': 'remove', 'AGENTS.md': 'replace-section', '.sdd/beligent/config.json': 'keep' });
+    expect(await readFile(skillFile)).toEqual(await readFile(path.join(root, 'skills/sdd-implement/SKILL.md')));
+    expect(await readFile(engineering)).toEqual(await readFile(path.join(root, 'skills/sdd-implement/references/technology/python.md')));
+    expect(await fileExists(path.join(project, '.agents/skills/sdd-implement/references/implementation.md'))).toBe(false);
+    for (const [relative, text] of Object.entries(owned)) expect(await readFile(path.join(project, relative), 'utf8')).toBe(text);
+    const final = await readFile(path.join(project, 'AGENTS.md'), 'utf8');
+    expect(final.startsWith('# Team rules\n\n')).toBe(true);
+    expect(final.endsWith(`${END}\n\nKeep this footer.\n`)).toBe(true);
+    expect(final).toContain((await readFile(path.join(root, 'skills/sdd-init/assets/AGENTS.fragment.md'), 'utf8')).trimEnd());
+    expect(sections(final)).toBe(1);
+  });
+
+  it('recreates a missing managed file, repeats without writes and writes a shared root once', async () => {
+    const project = await tempdir();
+    await writeFile(path.join(project, 'AGENTS.md'), 'Handwritten instructions');
+    const first = await install(project, { hosts: ['codex', 'github-copilot', 'cursor', 'github-copilot-cloud'] });
+    expect(first.plan.entries.filter((entry) => entry.path.endsWith('/SKILL.md'))).toHaveLength(5);
+    expect(first.plan.entries.filter((entry) => entry.path === 'AGENTS.md')).toHaveLength(1);
+    expect(await readFile(path.join(project, 'AGENTS.md'), 'utf8')).toMatch(/^Handwritten instructions\n\n<!-- beligent-sdd:start -->/);
+    await rm(path.join(project, '.agents/skills/sdd-audit/references/review.md'));
+    const repaired = await install(project, {});
+    expect(pending(repaired.plan).map((entry) => `${entry.action} ${entry.path}`)).toEqual(['create .agents/skills/sdd-audit/references/review.md']);
+    const before = await snapshotTree(project);
+    const repeat = await install(project, {});
+    expect(pending(repeat.plan)).toEqual([]);
+    expect(repeat.applied.written).toEqual([]);
+    expect(await snapshotTree(project)).toEqual(before);
+    expect(sections(await readFile(path.join(project, 'AGENTS.md'), 'utf8'))).toBe(1);
+    expect(sections(await readFile(path.join(project, '.github/copilot-instructions.md'), 'utf8'))).toBe(1);
+  });
+
+  it('reports malformed markers and unsupported old configuration without writing anything', async () => {
+    const malformed = await tempdir();
+    const handwritten = `# Rules\n${START}\none\n${END}\n${START}\ntwo\n${END}\n`;
+    await writeFile(path.join(malformed, 'AGENTS.md'), handwritten);
+    const plan = await planInstall(root, malformed, { hosts: ['codex'] });
+    expect(conflicts(plan).map((entry) => entry.path)).toEqual(['AGENTS.md']);
+    expect(conflicts(plan)[0]!.reason).toContain('found 2 start and 2 end Beligent SDD markers');
+    expect((await applyInstall(plan)).written).toEqual([]);
+    const refused = cli(['install', malformed, '--host', 'codex', '--apply']);
+    expect(refused.status).toBe(1);
+    expect(refused.stderr).toContain('Nothing was written');
+    expect(await readdir(malformed)).toEqual(['AGENTS.md']);
+    expect(await readFile(path.join(malformed, 'AGENTS.md'), 'utf8')).toBe(handwritten);
+
+    const old = await tempdir();
+    await mkdir(path.join(old, '.sdd/beligent'), { recursive: true });
+    await writeFile(path.join(old, '.sdd/beligent/config.json'), '{"schema_version": 1, "assistants": ["codex"]}\n');
+    await mkdir(path.join(old, '.beligent'));
+    await writeFile(path.join(old, '.beligent/config.json'), '{}');
+    const blocked = cli(['install', old, '--host', 'codex', '--apply']);
+    expect(blocked.status).toBe(1);
+    expect(blocked.stderr).toContain('BLOCKED .sdd/beligent/config.json cannot be used');
+    expect(blocked.stderr).toContain('earlier Beligent SDD schema');
+    expect(blocked.stderr).toContain('Pre-1.0 .beligent/config.json found');
+    expect((await readdir(old)).sort()).toEqual(['.beligent', '.sdd']);
+    expect(await readdir(path.join(old, '.sdd/beligent'))).toEqual(['config.json']);
+
+    for (const lines of [`${START}\nunterminated\n`, `${END}\n${START}\n`, `text ${START}\n${END}\n`]) expect(mergeSection(lines, `${START}\nnew\n${END}\n`)).toHaveProperty('conflict');
+    expect(mergeSection(`a\r\n${START}\r\nold\r\n${END}\r\nb\r\n`, `${START}\nnew\n${END}\n`)).toEqual({ action: 'replace-section', text: `a\r\n${START}\nnew\n${END}\r\nb\r\n` });
+  });
+
+  it('treats an unreadable or non-file instruction path as a conflict and writes nothing', async () => {
+    const cases: Array<[HostId, (project: string) => Promise<void>, string]> = [
+      ['codex', (project) => mkdir(path.join(project, 'AGENTS.md')), 'AGENTS.md'],
+      ['github-copilot', (project) => writeFile(path.join(project, '.github'), 'not a directory'), '.github/copilot-instructions.md'],
+      ['codex', async (project) => { await writeFile(path.join(project, 'AGENTS.md'), 'secret'); await chmod(path.join(project, 'AGENTS.md'), 0o000); }, 'AGENTS.md'],
+    ];
+    for (const [host, prepare, conflicted] of cases) {
+      const project = await tempdir();
+      await prepare(project);
+      const before = (await readdir(project)).sort();
+      const plan = await planInstall(root, project, { hosts: [host] });
+      expect(conflicts(plan).map((entry) => entry.path)).toEqual([conflicted]);
+      expect(await applyInstall(plan)).toEqual({ written: [], error: 'The plan has blockers or conflicts; nothing was written.' });
+      expect((await readdir(project)).sort()).toEqual(before);
+      await chmod(path.join(project, conflicted.split('/')[0]!), 0o755).catch(() => undefined);
+    }
+  });
+
+  it.each(['directory', 'unreadable', 'symlink'] as const)('does not bypass an invalid root CLAUDE.md (%s) for nested guidance', async (kind) => {
+    const project = await tempdir();
+    const rootInstructions = path.join(project, 'CLAUDE.md');
+    const nestedInstructions = path.join(project, '.claude/CLAUDE.md');
+    await mkdir(path.dirname(nestedInstructions));
+    await writeFile(nestedInstructions, '# Keep nested Claude rules\n');
+    if (kind === 'directory') await mkdir(rootInstructions);
+    else if (kind === 'unreadable') {
+      await writeFile(rootInstructions, '# Unreadable root rules\n');
+      await chmod(rootInstructions, 0o000);
+    } else {
+      const elsewhere = path.join(await tempdir(), 'CLAUDE.md');
+      await writeFile(elsewhere, '# Linked root rules\n');
+      await symlink(elsewhere, rootInstructions);
+    }
+    const before = (await readdir(project)).sort();
+    const nestedTime = (await stat(nestedInstructions, { bigint: true })).mtimeNs;
+    try {
+      const plan = await planInstall(root, project, { hosts: ['claude-code'] });
+      expect(conflicts(plan).map((entry) => entry.path)).toEqual(['CLAUDE.md']);
+      expect(plan.entries.some((entry) => entry.path === '.claude/CLAUDE.md')).toBe(false);
+      expect(await applyInstall(plan)).toEqual({ written: [], error: 'The plan has blockers or conflicts; nothing was written.' });
+      const applied = cli(['install', project, '--host', 'claude-code', '--apply']);
+      expect(applied.status).toBe(1);
+      expect(applied.stderr).toContain('Nothing was written');
+      expect((await readdir(project)).sort()).toEqual(before);
+      expect(await readFile(nestedInstructions, 'utf8')).toBe('# Keep nested Claude rules\n');
+      expect((await stat(nestedInstructions, { bigint: true })).mtimeNs).toBe(nestedTime);
+    } finally {
+      if (kind === 'unreadable') await chmod(rootInstructions, 0o600);
+    }
+  });
+
+  it('ignores an existing setup-state file and refuses linked destinations', async () => {
+    const project = await tempdir();
+    await mkdir(path.join(project, '.sdd/beligent'), { recursive: true });
+    await writeFile(path.join(project, '.sdd/beligent/setup-state.json'), 'not even JSON');
+    const { plan, applied } = await install(project, { hosts: ['claude-code'] });
+    expect(applied.error).toBeUndefined();
+    expect(plan.notes.join(' ')).toContain('setup-state.json is no longer used');
+    expect(plan.entries.some((entry) => entry.path.endsWith('setup-state.json'))).toBe(false);
+    expect(await readFile(path.join(project, '.sdd/beligent/setup-state.json'), 'utf8')).toBe('not even JSON');
+
+    const nested = await tempdir();
+    await mkdir(path.join(nested, '.claude'));
+    await writeFile(path.join(nested, '.claude/CLAUDE.md'), 'Nested Claude rules\n');
+    await install(nested, { hosts: ['claude-code'] });
+    expect(await fileExists(path.join(nested, 'CLAUDE.md'))).toBe(false);
+    expect(await readFile(path.join(nested, '.claude/CLAUDE.md'), 'utf8')).toContain('@../AGENTS.md');
+
+    const linked = await tempdir();
+    const elsewhere = await tempdir();
+    await symlink(elsewhere, path.join(linked, '.agents'));
+    const unsafe = await planInstall(root, linked, { hosts: ['codex'] });
+    expect(conflicts(unsafe).some((entry) => entry.path.startsWith('.agents/skills/') && entry.reason!.includes('symlink'))).toBe(true);
+    expect((await applyInstall(unsafe)).written).toEqual([]);
+    expect(await readdir(elsewhere)).toEqual([]);
+  });
+
+  it('requires a supported host, ignores other hosts and rejects unknown stacks', async () => {
+    const project = await tempdir();
+    expect((await planInstall(root, project)).blockers.join(' ')).toContain('Select at least one supported --host');
+    const ignored = await planInstall(root, project, { hosts: ['codex', 'windsurf'] });
+    expect(ignored.blockers).toEqual([]);
+    expect(ignored.hosts).toEqual(['codex']);
+    expect(ignored.notes.join(' ')).toContain('Ignoring windsurf: not a supported host');
+    expect((await planInstall(root, project, { hosts: ['windsurf'] })).blockers.join(' ')).toContain('Select at least one supported --host');
+    expect((await planInstall(root, project, { hosts: ['codex'], stacks: ['rails'] })).blockers.join(' ')).toContain('Unsupported stack rails');
+    const dry = cli(['install', project, '--host', 'codex']);
+    expect(dry.status).toBe(0);
+    expect(dry.stdout).toContain('dry run');
+    expect(dry.stdout).toContain('Policy: An explicit install replaces');
+    const copilot = cli(['install', project, '--host', 'github-copilot']).stdout;
+    expect(copilot).toContain('VS Code: type `/` in chat');
+    expect(copilot).toContain('Copilot CLI: run `/skills list`, then start the prompt with `/sdd-implement TICKET-042`.');
+    expect(await readdir(project)).toEqual([]);
   });
 });
 
 describe('workflow fixture', () => {
   const example = path.join(root, 'examples/workflow-fixture');
 
-  it('validates the fixture graph and runs its direct, tracked, failing and post-close scenarios', async () => {
+  it('validates the sample tickets and runs the walkthrough against the real CLI', async () => {
     expect(await validateProjectRecords(example, minimal)).toEqual([]);
     const { records: parsed } = parseRecords((await readRecordFiles(example)).files);
-    expect(parsed.map((record) => `${record.id}:${String(record.data.status)}`).sort()).toEqual(['EPIC-001:done', 'SPEC-001:active', 'TICKET-001:done', 'TICKET-002:done', 'TICKET-003:done', 'TICKET-004:in-progress']);
-    const run = spawnSync(process.execPath, ['run-scenarios.mjs'], { cwd: example, encoding: 'utf8' });
+    expect(parsed.map((record) => `${record.id}:${String(record.data.status)}`).sort()).toEqual(['TICKET-001:done', 'TICKET-002:done', 'TICKET-003:done', 'TICKET-004:in-progress']);
+    const before = (await readRecordFiles(example)).files;
+    const run = spawnSync(process.execPath, ['walkthrough.mjs'], { cwd: example, encoding: 'utf8', env: { ...process.env, BELIGENT_SDD_CLI: JSON.stringify(['--import', tsx, path.join(root, 'src/cli/index.ts')]) } });
     expect(run.status, run.stdout + run.stderr).toBe(0);
-    expect(run.stdout).toContain('direct fix and tracked implementation: PASS');
-    expect(run.stdout).toContain('required failure keeps tracked work open: expected FAIL');
-    expect(run.stdout).toContain('post-close audit finds a regression in done work: expected FAIL');
+    for (const line of ['no ticket exists', 'a ticket without requirements or criterion text is rejected', "done is rejected: check 'blank-title' is fail", 'TICKET-002 still validates', 'the next ID is TICKET-003', 'the code change stays', 'All walkthrough checks passed.']) expect(run.stdout).toContain(line);
+    expect((await readRecordFiles(example)).files).toEqual(before);
+    expect(spawnSync(process.execPath, ['--test', 'regression.test.mjs'], { cwd: example }).status).toBe(0);
   });
 
-  it('rejects the invalid closure case and an epic with an open member', async () => {
+  it('rejects the invalid closure case and accepts a removed dependency', async () => {
     const project = await tempdir();
     await cp(example, project, { recursive: true });
     await cp(path.join(example, 'cases/invalid-done.md'), path.join(project, '.sdd/beligent/tickets/TICKET-999.md'));
-    expect((await validateProjectRecords(project, minimal)).join(' ')).toContain("TICKET-999: required check 'label-regression' is fail");
-    const member = path.join(project, '.sdd/beligent/tickets/TICKET-003.md');
-    await writeFile(member, (await readFile(member, 'utf8')).replace('status: done', 'status: in-progress'));
-    expect((await validateProjectRecords(project, minimal)).join(' ')).toContain('EPIC-001: a done epic needs member tickets');
+    expect((await validateProjectRecords(project, minimal)).join(' ')).toContain("TICKET-999: check 'label-regression' is fail");
+    await rm(path.join(project, '.sdd/beligent/tickets/TICKET-999.md'));
+    await rm(path.join(project, '.sdd/beligent/tickets/TICKET-002.md'));
+    expect(await validateProjectRecords(project, minimal)).toEqual([]);
   });
 });

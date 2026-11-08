@@ -1,61 +1,58 @@
-import { readFile, readdir } from 'node:fs/promises';
-import path from 'node:path';
-import { skills } from './sync-assets.js';
+// Installation targets. A target names a host surface; `skills` is the physical
+// project root it discovers, so targets sharing a root share one generated copy.
+// Paths were checked against host documentation on 2026-11-06; none of this is a
+// live compatibility claim.
+export type InstructionBridge = 'AGENTS.md' | 'CLAUDE.md' | '.github/copilot-instructions.md';
+export type HostTarget = {
+  label: string;
+  skills: string;
+  instructions: InstructionBridge[];
+  start: string;
+  docs: string;
+};
 
-export const hostRoots = { codex: '.agents/skills', 'claude-code': '.claude/skills', 'github-copilot': '.agents/skills', cursor: '.agents/skills' } as const;
-export type PackagedHost = keyof typeof hostRoots;
-export type HostFile = { path: string; bytes: Buffer };
+export const hostTargets = {
+  codex: {
+    label: 'Codex (VS Code extension and CLI)',
+    skills: '.agents/skills',
+    instructions: ['AGENTS.md'],
+    start: 'Type `$sdd-implement TICKET-042` or pick the skill from `/skills`.',
+    docs: 'https://learn.chatgpt.com/docs/build-skills',
+  },
+  'claude-code': {
+    label: 'Claude Code (VS Code extension and CLI)',
+    skills: '.claude/skills',
+    instructions: ['AGENTS.md', 'CLAUDE.md'],
+    start: 'Start a message with `/sdd-implement TICKET-042`.',
+    docs: 'https://code.claude.com/docs/en/skills',
+  },
+  'github-copilot': {
+    label: 'GitHub Copilot (VS Code agent mode and CLI)',
+    skills: '.agents/skills',
+    instructions: ['AGENTS.md', '.github/copilot-instructions.md'],
+    start: 'VS Code: type `/` in chat and select `sdd-implement`, then add `TICKET-042`. Copilot CLI: run `/skills list`, then start the prompt with `/sdd-implement TICKET-042`.',
+    docs: 'https://code.visualstudio.com/docs/agent-customization/agent-skills',
+  },
+  'github-copilot-cloud': {
+    label: 'GitHub Copilot cloud agent',
+    skills: '.agents/skills',
+    instructions: ['AGENTS.md', '.github/copilot-instructions.md'],
+    start: 'Commit the files, then assign a task whose text starts with `/sdd-implement TICKET-042`. Copilot picks skills from the prompt; selecting one by command is not documented for the cloud agent.',
+    docs: 'https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-cloud-agent/add-skills',
+  },
+  cursor: {
+    label: 'Cursor Agent',
+    skills: '.agents/skills',
+    instructions: ['AGENTS.md'],
+    start: 'Type `/` in Agent chat and search for `sdd-implement`.',
+    docs: 'https://cursor.com/docs/context/skills',
+  },
+} as const satisfies Record<string, HostTarget>;
 
-// Read-only packaging input for a reviewed sdd-init proposal. Never applies changes
-// to the consumer project or resolves assistant discovery on behalf of a live host.
-export async function prepareHostPackage(sourceRoot: string, hosts: PackagedHost[], technologies: string[] = []): Promise<HostFile[]> {
-  if (!hosts.length || hosts.some((host) => !Object.hasOwn(hostRoots, host))) throw new Error('Select a documented host; Devin/cloud discovery needs separate validation.');
-  const files = new Map<string, Buffer>();
-  const add = async (source: string, destination: string): Promise<void> => { files.set(destination, await readFile(path.join(sourceRoot, source))); };
-  const walk = async (source: string, destination: string): Promise<void> => {
-    for (const entry of await readdir(path.join(sourceRoot, source), { withFileTypes: true })) {
-      if (entry.isDirectory()) await walk(`${source}/${entry.name}`, `${destination}/${entry.name}`);
-      else if (entry.isFile()) await add(`${source}/${entry.name}`, `${destination}/${entry.name}`);
-      else throw new Error(`Unsupported installed resource type: ${source}/${entry.name}`);
-    }
-  };
-  for (const root of new Set(hosts.map((host) => hostRoots[host]))) for (const skill of skills) await walk(`skills/${skill}`, `${root}/${skill}`);
-  for (const [source, name] of [
-    ['sdd-implement/references/implementation.md', 'engineering.md'],
-    ['sdd-implement/references/testing.md', 'testing.md'],
-    ['sdd-audit/references/review.md', 'review.md'],
-    ['sdd-define/references/shared/governance.md', 'shared/governance.md'],
-    ['sdd-audit/references/shared/diagnosis-and-simplicity.md', 'shared/diagnosis-and-simplicity.md'],
-  ]) await add(`skills/${source}`, `.sdd/beligent/guidance/${name}`);
-  for (const technology of new Set(technologies)) {
-    if (!['react-typescript', 'nextjs', 'nodejs', 'python', 'fastapi'].includes(technology)) throw new Error(`Unsupported technology: ${technology}`);
-    await add(`skills/sdd-implement/references/technology/${technology}.md`, `.sdd/beligent/guidance/${technology}.md`);
-  }
-  return [...files].sort(([left], [right]) => left.localeCompare(right)).map(([file, bytes]) => ({ path: file, bytes }));
-}
+export type HostId = keyof typeof hostTargets;
+export const hostIds = Object.keys(hostTargets) as HostId[];
+export const isHostId = (value: string): value is HostId => Object.hasOwn(hostTargets, value);
 
-export async function preflightHostPackage(projectRoot: string, files: HostFile[]): Promise<string[]> {
-  const { lstat } = await import('node:fs/promises');
-  const errors: string[] = [];
-  for (const file of files) {
-    const parts = file.path.split('/');
-    if (path.isAbsolute(file.path) || file.path.includes('\\') || parts.some((part) => !part || part === '.' || part === '..') || file.path.startsWith('.git/')) { errors.push(`Unsafe destination: ${file.path}`); continue; }
-    let target = path.resolve(projectRoot);
-    let safe = true;
-    for (const [index, part] of parts.entries()) {
-      target = path.join(target, part);
-      try {
-        const info = await lstat(target);
-        if (info.isSymbolicLink() || info.isFile() && (info.nlink > 1 || index < parts.length - 1) || info.isDirectory() && index === parts.length - 1) {
-          errors.push(`Unsafe existing destination or ancestor: ${file.path}`); safe = false; break;
-        }
-      } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') { errors.push(`Unreadable destination: ${file.path}`); safe = false; } break; }
-    }
-    if (!safe) continue;
-    try {
-      const current = await readFile(path.join(projectRoot, file.path));
-      if (!current.equals(file.bytes)) errors.push(`Existing content needs reviewed merge: ${file.path}`);
-    } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') errors.push(`Unreadable content: ${file.path}`); }
-  }
-  return errors;
-}
+// Roots other hosts read in addition to their own; selecting one of these hosts
+// together with Claude Code can show the five skills twice.
+export const alsoReadsClaudeSkills: readonly HostId[] = ['github-copilot', 'github-copilot-cloud', 'cursor'];

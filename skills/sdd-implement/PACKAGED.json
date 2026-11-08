@@ -3,7 +3,6 @@
   "resources": {
     "references/records.md": "skills/sdd-define/references/records.md",
     "references/review.md": "skills/sdd-audit/references/review.md",
-    "references/shared/current-task-lifecycle.md": "skills/sdd-define/references/shared/current-task-lifecycle.md",
     "references/shared/diagnosis-and-simplicity.md": "skills/sdd-audit/references/shared/diagnosis-and-simplicity.md",
     "references/shared/governance.md": "skills/sdd-define/references/shared/governance.md"
   }

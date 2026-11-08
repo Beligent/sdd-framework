@@ -1,30 +1,32 @@
 ---
-schema: beligent-sdd/ticket/v2
+schema: beligent-sdd/ticket
 id: TICKET-003
 title: Clamp negative task counts
 status: done
-revision: 1
-epic: EPIC-001
-spec_criteria: [SPEC-001/AC-002]
-implementation:
-  base: 778afa1f3c24
-  snapshot: git-tree:5aea53cc86db3e41bf77c98e15550bf3f5f951a8
+depends_on: [TICKET-002]
 checks:
-  - id: spec-regression
-    criteria: [SPEC-001/AC-002]
-    required: true
+  - id: count-regression
+    criteria: [AC-001]
     command: BELIGENT_FIXTURE_MODULE=./app.mjs node --test regression.test.mjs
-    coverage: added
-    tests: [regression.test.mjs]
     outcome: pass
-    revision: 1
-    snapshot: git-tree:5aea53cc86db3e41bf77c98e15550bf3f5f951a8
 ---
 
 # Clamp negative task counts
 
-Implements [SPEC-001/AC-002](../specs/SPEC-001.md) for [EPIC-001](../epics/EPIC-001.md).
+## Context
+
+Sync errors can produce negative task counts, which the badge shows as-is.
+
+## Requirements
+
+`count` never returns a negative number; zero and positive counts are unchanged.
 
 ## Acceptance criteria
 
-Defined by the shared spec criterion listed in `spec_criteria`.
+### AC-001
+
+Negative counts clamp to zero; positive counts are preserved.
+
+## Out of scope
+
+Fixing the sync error itself.

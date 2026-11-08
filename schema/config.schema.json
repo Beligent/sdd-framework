@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:beligent:sdd:config:v2",
-  "title": "Beligent SDD project configuration (v2)",
+  "$id": "urn:beligent:sdd:config",
+  "title": "Beligent SDD project configuration",
   "description": "Project settings at .sdd/beligent/config.json. Earlier schemas are rejected, never converted.",
   "type": "object",
   "additionalProperties": false,
@@ -11,21 +11,17 @@
   ],
   "properties": {
     "schema": {
-      "const": "beligent-sdd/config/v2"
+      "const": "beligent-sdd/config"
     },
     "hosts": {
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
       "items": {
-        "enum": [
-          "codex",
-          "claude-code",
-          "github-copilot",
-          "cursor",
-          "devin"
-        ]
-      }
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Supported: codex, claude-code, github-copilot, github-copilot-cloud, cursor. Other names are ignored."
     },
     "project": {
       "type": "object",
@@ -65,7 +61,7 @@
         "properties": {
           "id": {
             "type": "string",
-            "pattern": "^[a-z][a-z0-9-]*$"
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
           },
           "command": {
             "type": "string",
@@ -76,58 +72,6 @@
           }
         }
       }
-    },
-    "tracking": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "required_for": {
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "authorization": {
-          "enum": [
-            "request",
-            "recorded"
-          ]
-        }
-      }
-    },
-    "delivery": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "commit": {
-          "$ref": "#/$defs/permission"
-        },
-        "push": {
-          "$ref": "#/$defs/permission"
-        },
-        "pull_request": {
-          "$ref": "#/$defs/permission"
-        },
-        "delivered_at": {
-          "enum": [
-            "commit",
-            "push",
-            "pull-request",
-            "merged-pr"
-          ]
-        }
-      }
-    }
-  },
-  "$defs": {
-    "permission": {
-      "enum": [
-        "allowed",
-        "ask",
-        "never"
-      ]
     }
   }
 }
