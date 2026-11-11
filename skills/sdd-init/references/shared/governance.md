@@ -21,27 +21,11 @@ The framework runs only when the prompt starts with a skill command:
 | `sdd-audit` | Reading, and running config `checks` or steps the developer approves; no changes |
 | `sdd-deliver` | Staging, commit, push or pull request as requested, and ticket removal on confirmation |
 
-Without a command, the agent is an ordinary coding agent: it applies the stack
-guides in `.sdd/beligent/guidance/` named by config `stacks` that the changed
-files use, and does not read or write tickets, except for the continuation guard.
-
-## Continuation guard
-
-When a request without a command relates to an open ticket (`todo`,
-`in-progress` or `blocked`), because it names the ticket or continues ticket
-work from the same conversation, stop before any change and ask whether to keep
-using the framework for it. Read only the named ticket's `status` to decide.
-Suggest the same request starting with the command, for example
-`/sdd-implement TICKET-042 <request>` (`$sdd-implement …` in Codex).
-
-- Yes: the developer resends the prompt with the command.
-- No: set the ticket to `cancelled` with a `cancelled_reason` such as
-  "Continued without the framework". Do not delete it or edit other tickets;
-  name any ticket that lists it in `depends_on`. Keep all code and tests. Then
-  continue as an ordinary coding agent, without the framework.
-
-Done and cancelled tickets are closed; related new work without a command is
-ordinary work and needs no question.
+Without a command, the agent is an ordinary coding agent and does what is
+asked, even after a command in the same conversation and even while tickets are
+open. It applies the stack guides in `.sdd/beligent/guidance/` named by config
+`stacks` that the changed files use, and never reads, writes or asks about
+tickets. Its changes stay in the working tree like any other edit.
 
 ## Tickets
 

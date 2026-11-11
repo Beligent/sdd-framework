@@ -2,7 +2,7 @@
 
 A small Node.js example of the Beligent SDD framework flow: work without a command, a ticket
 defined and implemented to done, failing and blocked checks, ticket removal
-before delivery, and the "no" answer to the continuation guard. It has two parts:
+before delivery, and work without a command while a ticket is open. It has two parts:
 
 - [`walkthrough.mjs`](walkthrough.mjs), which runs the real `sdd` CLI and real
   `node --test` runs in a disposable Git project and checks every outcome it prints;
@@ -70,14 +70,14 @@ ticket; the developer agrees, so it is deleted before the commit, and its criter
 although it depends on the removed ticket, and the next ID is TICKET-003 because
 IDs come from Git history and are never reused.
 
-**6. Leaving the framework.** TICKET-003 is in progress when the developer
-continues without a command and answers "no" to the continuation guard: the
-ticket is set to `cancelled` with a reason and kept, and the code change stays.
-The developer deletes it later, or `/sdd-deliver` asks before committing.
+**6. Work without a command while a ticket is open.** TICKET-003 is in progress
+when the developer asks for a change without a command. The change is made
+without questions, the ticket file stays byte-for-byte unchanged and still
+validates, and the change stays in the working tree for the usual workflow.
 
 ## Observed output
 
-Recorded on 2026-11-08 by running the walkthrough against the TypeScript CLI
+Recorded on 2026-11-11 by running the walkthrough against the TypeScript CLI
 (Node.js 22, macOS).
 
 ```text
@@ -100,8 +100,8 @@ Recorded on 2026-11-08 by running the walkthrough against the TypeScript CLI
 5. "/sdd-deliver TICKET-001": the developer agrees to delete the finished ticket before the commit
   observed: TICKET-001 is removed, its criteria stay in the commit message, and TICKET-002 still validates
   observed: the next ID is TICKET-003, taken from Git history, so a removed ID is never reused
-6. Continuing TICKET-003 without a command, then answering "no"
-  observed: TICKET-003 is cancelled with a reason, the code change stays, and the developer continues alone
+6. A change without a command while TICKET-003 is in progress
+  observed: the change is made, TICKET-003 is unchanged and still validates
 All walkthrough checks passed.
 ```
 

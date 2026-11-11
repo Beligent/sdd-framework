@@ -7,9 +7,11 @@ Delivery changes Git state for exactly one change, and only on the
 
 ## Commit integrity
 
-- Inspect both the working tree and the index. Compare each candidate path with
-  the change and exclude unrelated modifications; never use broad staging that
-  could absorb them.
+- Inspect both the working tree and the index. Changes made without a command
+  belong to the change, even when they mix with ticket work; do not try to
+  separate them. Exclude only paths the developer names, and never use broad
+  staging that could absorb files outside the working tree's change, such as
+  ignored or generated output.
 - If the existing index cannot be preserved while isolating the change, stop and
   ask instead of resetting or stashing someone else's work.
 - Review the exact staged diff. Reject secrets, credentials, private material,

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.3
+
+- A prompt without a command is ordinary work, even after a command in the same
+  conversation and while tickets are open. The continuation guard is removed:
+  the agent no longer stops, asks or cancels tickets. `/sdd-implement` keeps
+  that work and `/sdd-deliver` commits it with the ticket's work unless the
+  developer names paths to leave out. Re-run `sdd install --apply` to update the
+  instruction section.
+
 ## 1.0.2
 
 - The skills run the framework CLI without asking where it is installed: `sdd`

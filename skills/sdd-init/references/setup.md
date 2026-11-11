@@ -62,8 +62,8 @@ Claude Code, VS Code Copilot and Cursor honor, and ships `agents/openai.yaml`
 with `policy.allow_implicit_invocation: false` for Codex. The skills then run
 only when typed as a command. Where a host documents no such setting, the skill
 descriptions and the instruction section are the only protection. Without
-a command, the instruction section applies only the selected stack guides and
-the continuation guard from the [shared contract](shared/governance.md#continuation-guard).
+a command, the instruction section applies only the selected stack guides, as
+the [shared contract](shared/governance.md#activation) describes.
 
 ## Inventory and proposal
 

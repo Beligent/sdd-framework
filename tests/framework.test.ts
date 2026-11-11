@@ -454,7 +454,7 @@ describe('CLI', () => {
   it('prints version and returns expected usage/unknown-command exit codes', () => {
     const version = cli(['version']);
     expect(version.status).toBe(0);
-    expect(version.stdout.trim()).toBe('1.0.2');
+    expect(version.stdout.trim()).toBe('1.0.3');
     expect(cli(['unknown']).status).toBe(2);
     expect(cli(['validate', '--unknown']).status).toBe(2);
     expect(cli(['validate', '--since', 'main']).status).toBe(2);
@@ -793,7 +793,7 @@ describe('workflow fixture', () => {
     const before = (await readRecordFiles(example)).files;
     const run = spawnSync(process.execPath, ['walkthrough.mjs'], { cwd: example, encoding: 'utf8', env: { ...process.env, BELIGENT_SDD_CLI: JSON.stringify(['--import', tsx, path.join(root, 'src/cli/index.ts')]) } });
     expect(run.status, run.stdout + run.stderr).toBe(0);
-    for (const line of ['no ticket exists', 'a ticket without requirements or criterion text is rejected', "done is rejected: check 'blank-title' is fail", 'TICKET-002 still validates', 'the next ID is TICKET-003', 'the code change stays', 'All walkthrough checks passed.']) expect(run.stdout).toContain(line);
+    for (const line of ['no ticket exists', 'a ticket without requirements or criterion text is rejected', "done is rejected: check 'blank-title' is fail", 'TICKET-002 still validates', 'the next ID is TICKET-003', 'TICKET-003 is unchanged and still validates', 'All walkthrough checks passed.']) expect(run.stdout).toContain(line);
     expect((await readRecordFiles(example)).files).toEqual(before);
     expect(spawnSync(process.execPath, ['--test', 'regression.test.mjs'], { cwd: example }).status).toBe(0);
   });

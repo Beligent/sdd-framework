@@ -58,7 +58,7 @@ try {
   expect(/Summary: \d+ unchanged, 1 keep$/m.test(sdd('install').stdout), 'repeat install is a no-op');
   observed('repeat install reports only unchanged files and keeps config');
   const agents = await read('AGENTS.md');
-  expect(agents.startsWith('# Project rules\n') && agents.includes('runs only when a prompt starts with'), 'handwritten text kept and guard added');
+  expect(agents.startsWith('# Project rules\n') && agents.includes('runs only when a prompt starts with'), 'handwritten text kept and section added');
   observed('AGENTS.md keeps its text and gains the command-only Beligent SDD section');
   const config = JSON.parse(await read('.sdd/beligent/config.json'));
   config.checks = [{ id: 'test', command: 'node --test', paths: ['**/*.mjs'] }];
@@ -135,14 +135,13 @@ try {
   expect(nextId() === 'TICKET-003', 'IDs are not reused after removal');
   observed('the next ID is TICKET-003, taken from Git history, so a removed ID is never reused');
 
-  console.log('6. Continuing TICKET-003 without a command, then answering "no"');
+  console.log('6. A change without a command while TICKET-003 is in progress');
   await ticket('TICKET-003', { title: 'Trim long titles', status: 'in-progress' }, { requirements: 'Long titles end with an ellipsis.', criteria: [['AC-001', 'Titles over 80 characters end with an ellipsis.']] });
+  const before = await read(ticketPath('TICKET-003'));
   await edit('app.mjs', 'return String(value).trim();', 'const text = String(value).trim();\n  return text.length > 80 ? `${text.slice(0, 79)}…` : text;');
-  const kept = await read('app.mjs');
-  await edit(ticketPath('TICKET-003'), 'status: "in-progress"', 'status: "cancelled"\ncancelled_reason: "Continued without the framework"');
-  expect(existsSync(path.join(project, ticketPath('TICKET-003'))) && (await read('app.mjs')) === kept, 'ticket kept, code kept');
-  expect(sdd('validate').status === 0, 'the cancelled ticket validates');
-  observed('TICKET-003 is cancelled with a reason, the code change stays, and the developer continues alone');
+  expect((await read(ticketPath('TICKET-003'))) === before && git('status', '--porcelain').includes('app.mjs'), 'ticket unchanged, change in the working tree');
+  expect(sdd('validate').status === 0, 'the open ticket still validates');
+  observed('the change is made, TICKET-003 is unchanged and still validates');
   console.log(process.argv.includes('--keep') ? `Project kept at ${project}` : 'All walkthrough checks passed.');
 } finally {
   if (!process.argv.includes('--keep')) await rm(project, { recursive: true, force: true });

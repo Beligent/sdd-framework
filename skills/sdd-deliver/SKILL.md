@@ -15,7 +15,9 @@ only; push and pull request need to be asked for.
 1. Identify the change: the named ticket or the single unambiguous current change.
    If its ticket is open, report that and ask whether to deliver anyway.
 2. Inspect branch, upstream, index, working tree and untracked files. Define the
-   exact paths of this change and exclude unrelated work.
+   exact paths of this change. Changes made without a command in the working
+   tree belong to it; do not try to separate them. Exclude only paths the
+   developer names, and list every staged path in the report.
 3. Ticket cleanup: if the ticket is `done` or `cancelled`, ask whether to delete
    it before committing. If yes, delete the file, remove its ID from other
    tickets' `depends_on`, and add the ticket's title and criteria to the commit

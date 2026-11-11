@@ -36,24 +36,15 @@ only `/sdd-deliver` changes Git state. The skills are in [skills/](skills/); eac
 ### Without a command
 
 Ask for a feature, fix or refactor normally. The agent works as an ordinary
-coding agent and applies only the stack guides your config selects, from
-`.sdd/beligent/guidance/`. It does not read or write tickets, except as below.
+coding agent and does what you ask, even right after a command in the same
+conversation and even while tickets are open. It applies only the stack guides
+your config selects, from `.sdd/beligent/guidance/`, and never reads, writes or
+asks about tickets.
 
-If such a request continues an open ticket (`todo`, `in-progress` or `blocked`),
-because it names the ticket or continues ticket work from the conversation, the
-agent stops and asks whether to keep using the framework. It suggests the same
-request starting with the command, for example `/sdd-implement TICKET-042 <request>`.
-
-- **Yes:** resend the prompt with the command.
-- **No:** the agent sets the ticket to `cancelled` with a reason and names any
-  ticket that depends on it. Your code stays; you continue on your own. Delete
-  the ticket yourself, or let `/sdd-deliver` ask you before committing.
-
-The guard cannot recognize a fresh session that continues the work without
-naming the ticket; start such a request with `/sdd-implement TICKET-042`.
-
-Done and cancelled tickets are closed, so related work without a command is just
-ordinary work.
+That work stays in the working tree. A later `/sdd-implement` keeps it and runs
+the ticket's checks against the whole final diff, and `/sdd-deliver` commits it
+together with the ticket's work unless you name paths to leave out. To drop an
+open ticket, cancel it with `/sdd-define`.
 
 ### Tickets
 
@@ -223,7 +214,7 @@ never in the installed skill copies.
 The external `skills` CLI can copy the skill folders from a Git source
 (`npx skills@1.7.2 add <git-source> --skill '*' --agent codex --copy -y`). It does
 not write the config, the stack guides or the instruction sections, so the
-continuation guard and stack guides are missing until `sdd install` adds them.
+command-only section and stack guides are missing until `sdd install` adds them.
 
 ## Supported assistants
 
@@ -283,7 +274,7 @@ version, date and what you observed.
 2. The five skills appear in the command list; `/sdd-init` proposes and writes nothing before approval.
 3. A small change without a command loads no skill, applies the stack guide and creates no ticket.
 4. `/sdd-define`, then `/sdd-implement`: requirements, recorded checks, no `done` while a check fails.
-5. In a new session, continue the open ticket without a command: the agent asks and suggests the command; "no" sets the ticket to `cancelled` and keeps it.
+5. Right after `/sdd-define`, in the same session, ask for a small change without a command: the agent makes it without questions and the ticket is unchanged.
 6. `/sdd-audit` a done ticket after a regression: it reports the failure, runs only config checks or approved commands, and edits nothing.
 7. `/sdd-deliver` with a disposable remote: it proposes removing the ticket, stages exactly the change and pushes only when asked.
 
