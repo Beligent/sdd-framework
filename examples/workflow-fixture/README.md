@@ -28,7 +28,7 @@ The script stands in for the developer and the assistant: it edits code and
 writes tickets the way the commands would. The quoted commands show what a
 developer would type in a host; they are **illustrative** and were not sent to
 an assistant. Host behavior is covered by the
-[live test procedure](../../README.md#live-test-in-a-host).
+[live test procedure](#live-test-in-a-host).
 
 ## Scenarios
 
@@ -120,3 +120,17 @@ module named by `BELIGENT_FIXTURE_MODULE`.
 - `cases/invalid-done.md` declares `done` with that failing check; the test suite
   copies it into a disposable project and confirms `sdd validate` rejects it.
 - `audit-regression.mjs` is a later regression in done work, for `/sdd-audit` practice.
+
+## Live test in a host
+
+Use a disposable repository and a fresh session per step, and record the host,
+version, date and what you observed.
+
+1. `sdd install --host <id> --apply`; a repeat dry run reports no changes.
+2. The five skills appear in the command list; `/sdd-init` proposes and writes nothing before approval.
+3. A small change without a command loads no skill, applies the stack guide and creates no ticket.
+4. `/sdd-define`, then `/sdd-implement`: requirements, recorded checks, no `done` while a check fails.
+5. Right after `/sdd-define`, in the same session, ask for a small change without a command: the agent makes it without questions and the ticket is unchanged.
+6. `/sdd-implement` on a done ticket with an improvement: it reopens as `in-progress` and is `done` again only when every criterion passes.
+7. `/sdd-audit` a done ticket after a regression: it reports the failure, runs only config checks or approved commands, and edits nothing.
+8. `/sdd-deliver` with a disposable remote: it proposes removing the ticket, stages exactly the change and pushes only when asked.

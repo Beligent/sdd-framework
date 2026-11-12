@@ -1,7 +1,7 @@
 {
   "name": "@beligent/sdd-framework",
   "version": "1.0.3",
-  "description": "A vendor-neutral, Agent Skills-based Specification-Driven Development framework.",
+  "description": "A lightweight engineering playbook for AI coding assistants: define, implement, test, review and deliver changes with Agent Skills.",
   "license": "MIT",
   "private": false,
   "repository": {

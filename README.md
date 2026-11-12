@@ -1,73 +1,87 @@
-# Beligent SDD framework
+# Beligent SDD
 
-Beligent's SDD framework supports AI-assisted code work with well-defined tickets, started only
-by explicit commands. Five Agent Skills carry the method; a small TypeScript CLI
-installs them for your coding assistant, validates project configuration and
-tickets, and accounts for explicitly imported local token usage.
+Beligent SDD gives your coding assistant a shared engineering playbook: how to
+understand a change, implement it, test it, review it and deliver it. The
+assistant does the engineering work; Beligent supplies the instructions and
+tools that make that work consistent and reviewable.
 
-The framework is a support, not a mandatory route. The developer owns the
-feature, its completeness and its acceptance; a ticket covers only the AI's part
-of it. This README and the skills themselves are the complete documentation.
+It is deliberately lightweight. Five Agent Skills carry the method, a ticket is
+a single Markdown file in your repository, and a small CLI installs the skills
+and validates the tickets. There is no server, account, database or telemetry.
 
-## Status
+## Who it is for
 
-This version is an experiment. There is no guarantee about quality or security.
-It is a clean break with no backward compatibility.
+- **Solo developers** who want an AI assistant to work from clear requirements
+  and prove its work with real checks, without adopting a process tool.
+- **Product engineers** who take a feature from intent to deployment: define
+  it, let the assistant implement it, review the evidence and ship it.
+- **Small teams** who want AI-written changes to arrive with the same structure
+  every time: requirements, acceptance criteria, recorded checks and a clean
+  commit.
+
+It works with Codex, Claude Code, GitHub Copilot and Cursor, and with any
+codebase. Stack guides are included for React with TypeScript, Next.js,
+Node.js, Python and FastAPI.
+
+## Quick start
+
+Requires Node.js 22 or later.
+
+1. Preview, then install, in your project root:
+
+   ```sh
+   npx @beligent/sdd-framework install --host claude-code --stack nextjs
+   npx @beligent/sdd-framework install --host claude-code --stack nextjs --apply
+   ```
+
+2. Open your assistant at the project root and run
+   `/sdd-init Inspect the project and propose its checks.` It reads your
+   scripts and CI and proposes the project checks; nothing is written before you
+   approve.
+3. Work:
+
+   ```text
+   /sdd-define Users can export their invoices as CSV
+   /sdd-implement TICKET-001
+   /sdd-deliver TICKET-001
+   ```
 
 ## How it works
 
 ### Commands
 
-The framework runs only when a prompt starts with one of its commands. Codex uses
-`$` instead of `/`. Plain language never starts it, even when it names a ticket.
+The framework runs only when a prompt starts with one of its commands (`$`
+instead of `/` in Codex). Each command authorizes only its own workflow.
 
 | Command                     | Does                                                                                         |
 | --------------------------- | -------------------------------------------------------------------------------------------- |
 | `/sdd-init`                 | Reviewed setup or adoption of a repository; writes nothing before you approve the plan       |
 | `/sdd-define <request>`     | Writes one ticket with context, requirements, testable criteria and an out-of-scope list     |
 | `/sdd-implement TICKET-042` | Implements the ticket, runs and records its checks, sets done or blocked; never commits      |
-| `/sdd-audit <request>`      | Optional read-only review of a ticket or diff, a setup audit, or a failure diagnosis         |
+| `/sdd-audit <request>`      | Read-only review of a ticket or diff, a setup audit, or a failure diagnosis                  |
 | `/sdd-deliver TICKET-042`   | Asks whether to delete the finished ticket, then commits; pushes or opens a PR only if asked |
 
-Each command authorizes only its own workflow. Implementing never commits, and
-only `/sdd-deliver` changes Git state. The skills are in [skills/](skills/); each
-`SKILL.md` is the procedure the agent follows.
+Implementing never commits, and only `/sdd-deliver` changes Git state. The
+skills are in [skills/](skills/); each `SKILL.md` is the procedure the agent
+follows.
 
 ### Without a command
 
-Ask for a feature, fix or refactor normally. The agent works as an ordinary
+Ask for a feature, fix or refactor normally. The assistant works as an ordinary
 coding agent and does what you ask, even right after a command in the same
-conversation and even while tickets are open. It applies only the stack guides
-your config selects, from `.sdd/beligent/guidance/`, and never reads, writes or
-asks about tickets.
+conversation and while tickets are open. It applies only the stack guides your
+config selects and never reads, writes or asks about tickets.
 
 That work stays in the working tree. A later `/sdd-implement` keeps it and runs
 the ticket's checks against the whole final diff, and `/sdd-deliver` commits it
-together with the ticket's work unless you name paths to leave out. To drop an
-open ticket, cancel it with `/sdd-define`.
+with the ticket's work unless you name paths to leave out.
 
 ### Tickets
 
 A ticket is one bounded piece of AI work in `.sdd/beligent/tickets/TICKET-NNN.md`,
-created only by `/sdd-define`.
-
-`sdd validate` rejects a ticket without a Requirements section or with an empty
-criterion.
-
-A manual check uses `procedure` and `observed` instead of `command`. Outcomes are
-`pass`, `fail`, `blocked` and `not-run`. The agent records results from the
-final diff and replaces earlier ones after a later change.
-
-Each config check names the files it covers in `paths`. `/sdd-define` lists in
-the ticket's `checks_required` the checks matching the files the work touches,
-so a frontend ticket runs frontend checks and a backend ticket backend checks.
-A check with `paths: ["**"]`, such as a secrets scan, applies to every ticket.
-A check without `paths` is yours to run. The agent iterates with focused tests
-and runs the listed checks once, on the final diff.
-
-A feature too large for one implementation session becomes several tickets;
-each lists the tickets it builds on in `depends_on`, and `/sdd-implement` stops
-while one of them exists and is not done.
+created by `/sdd-define`. You own the feature, its completeness and its
+acceptance; a ticket covers only the assistant's part of it. A feature too
+large for one session becomes several tickets linked by `depends_on`.
 
 | Status        | Meaning                                                                                                                           |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------- |
@@ -77,26 +91,24 @@ while one of them exists and is not done.
 | `done`        | Every criterion has a passing check, every listed or `**` project check passed and no check is failing. The agent sets it         |
 | `cancelled`   | Dropped on your decision, with `cancelled_reason`                                                                                 |
 
-To improve a done ticket, run `/sdd-implement TICKET-042 <improvement>`: the
-agent reopens it as `in-progress`, adds a criterion when the improvement needs
-one, and sets `done` again only when every criterion passes. Open tickets that
-depend on it wait until then. Cancelled tickets are never reopened or edited; a
-related change is a new ticket, or a correction outside the framework, for
-example in a follow-up commit. Deleting a ticket is your decision: before committing, `/sdd-deliver`
-asks whether to delete a done or cancelled ticket and, if so, puts its title and
-criteria in the commit message, so the repository stays clean and the
-requirements stay in Git history. A `depends_on` entry for a deleted ticket
-counts as satisfied, and new IDs take the highest ID in the folder or Git
-history plus one, so a committed ID is never reused.
+- **Checks.** Each project check names the files it covers in `paths`, so a
+  frontend ticket runs frontend checks and a backend ticket backend checks. A
+  check with `paths: ["**"]`, such as a secrets scan, applies to every ticket.
+  The agent iterates with focused tests and runs the listed checks once, on the
+  final diff. A manual check records a `procedure` and what was `observed`.
+- **Improving done work.** `/sdd-implement TICKET-042 <improvement>` reopens a
+  done ticket, adds a criterion when needed, and sets `done` again only when
+  every criterion passes. Cancelled tickets are final.
+- **Clean history.** Before committing, `/sdd-deliver` asks whether to delete a
+  finished ticket and, if so, puts its title and criteria in the commit
+  message. Requirements stay in Git history, and ticket IDs are never reused.
 
-The normative rules are the [ticket contract](skills/sdd-define/references/records.md)
-and the [shared contract](skills/sdd-define/references/shared/governance.md).
+`sdd validate` enforces the structure: requirements present, criteria filled,
+dependencies valid, and no `done` without passing checks. The normative rules
+are the [ticket contract](skills/sdd-define/references/records.md) and the
+[shared contract](skills/sdd-define/references/shared/governance.md).
 
 ## Install
-
-Requires Node.js 22 or later. The CLI does not need Git.
-
-### From npm
 
 ```sh
 npx @beligent/sdd-framework install --host codex --stack nextjs          # dry run: prints the plan
@@ -106,56 +118,36 @@ npx @beligent/sdd-framework install --host codex --stack nextjs --apply  # write
 npx @beligent/sdd-framework install --host codex,claude-code --stack python,fastapi,nextjs,react-typescript,nodejs --apply
 ```
 
-npx may reuse a version it downloaded earlier. To upgrade a project, ask for the
-newest one explicitly: `npx @beligent/sdd-framework@latest install --apply`.
-
-Or install the CLI globally with `npm install -g @beligent/sdd-framework` and
-run `sdd install …` in each project.
-
-### From a local checkout
-
-```sh
-cd /path/to/beligent-sdd-framework
-npm ci && npm run build
-rm -rf /tmp/beligent-pack && mkdir -p /tmp/beligent-pack && npm pack --pack-destination /tmp/beligent-pack
-
-cd /path/to/target-project
-npx --yes --package /tmp/beligent-pack/beligent-sdd-framework-*.tgz -- sdd install --host codex --stack nextjs --apply
-```
-
-To type plain `sdd`, run `npm install -g /tmp/beligent-pack/beligent-sdd-framework-*.tgz` once.
-
-### Options
+Install, reinstall and upgrade are the same command. To upgrade, ask npx for the
+newest version explicitly: `npx @beligent/sdd-framework@latest install --apply`.
+You can also install the CLI globally with `npm install -g @beligent/sdd-framework`
+and run `sdd install …`.
 
 - `--host`: one or more of `codex`, `claude-code`, `github-copilot`,
-  `github-copilot-cloud`, `cursor`; repeat it or pass a comma-separated list.
-  Other names are ignored with a note.
+  `github-copilot-cloud`, `cursor`, repeated or comma-separated.
 - `--stack`: one or more of `react-typescript`, `nextjs`, `nodejs`, `python`,
-  `fastapi`, repeated or comma-separated; select only the stacks the project uses.
+  `fastapi`; select only the stacks the project uses.
 - `--name`: project name for a new config (default: the directory name).
 - Without `--host` and `--stack`, the values in the existing config are reused.
-  Install, reinstall and upgrade are the same command.
 
 ### What install writes
 
 | Destination                                                                             | Behavior                                                                                                                      |
 | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| The five skill folders in each selected skill root                                      | Replaced with the packaged files even if edited; files no longer in the package are removed from those folders                |
-| `.sdd/beligent/guidance/<stack>.md` for each selected stack                             | Replaced with the packaged version even if edited                                                                             |
+| The five skill folders in each selected skill root                                      | Replaced with the packaged files; files no longer in the package are removed from those folders                               |
+| `.sdd/beligent/guidance/<stack>.md` for each selected stack                             | Replaced with the packaged version                                                                                            |
 | `AGENTS.md`; `CLAUDE.md` for Claude Code; `.github/copilot-instructions.md` for Copilot | Only the text between `<!-- beligent-sdd:start -->` and `<!-- beligent-sdd:end -->` is replaced, or appended once when absent |
 | `.sdd/beligent/config.json`                                                             | Created only when missing; an existing valid config is kept, an invalid or earlier one stops the install                      |
 | Tickets, your own files in `guidance/`, other skills, everything else                   | Never written                                                                                                                 |
 
-The dry run lists every change. Duplicate or broken markers, symlinked or
-hard-linked paths, directory collisions and paths outside the project are
-conflicts that stop the whole install before any write. A repeat writes
-nothing; after a failed write, rerun the same command. No setup state is kept.
-When a root `CLAUDE.md` is absent but `.claude/CLAUDE.md` exists, the Claude
-section goes there instead. Guidance files from earlier versions
-(`engineering.md`, `testing.md`, `review.md`, `shared/`), earlier skill names,
-`.beligent/` and `epics/` or `specs/` folders are reported, never deleted.
+The dry run lists every change. Broken markers, linked paths, collisions and
+paths outside the project stop the whole install before any write, and a repeat
+run writes nothing. When a root `CLAUDE.md` is absent but `.claude/CLAUDE.md`
+exists, the Claude section goes there. Files from versions before 1.0
+(`.beligent/`, earlier skill names, `epics/` or `specs/` folders) are reported,
+never deleted.
 
-A configured project then looks like this:
+A configured project looks like this:
 
 ```text
 AGENTS.md              # your text plus the Beligent SDD section
@@ -169,17 +161,6 @@ CLAUDE.md              # Claude Code: Beligent SDD section importing @AGENTS.md
   tickets/             # created by the first /sdd-define
   usage.jsonl          # only after an explicit usage import
 ```
-
-### Finish setup
-
-Start a fresh session in your assistant at the project root and type:
-
-> /sdd-init Inspect the project and propose its checks.
-
-`/sdd-init` reads your scripts and CI and proposes `checks` for review. For an
-existing codebase it also inventories instructions, tests, conventions and
-existing backlog, and proposes reuse rather than moving anything. After you
-approve, it applies the plan and edits the config.
 
 ### Configuration
 
@@ -200,24 +181,18 @@ approve, it applies the plan and edits the config.
 }
 ```
 
-| Setting        | Effect                                                                                                                  |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `hosts`        | Assistants to integrate. Unsupported names are ignored                                                                  |
-| `project.name` | Display name                                                                                                            |
-| `stacks`       | Stack guides applied to code requests, with or without a command. Project conventions override generic stack advice     |
-| `checks`       | Project commands with the `paths` they cover. A ticket must pass its `checks_required` and every `**` check, recorded with this command |
+| Setting        | Effect                                                                                                                                                 |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `hosts`        | Assistants to integrate                                                                                                                                |
+| `project.name` | Display name                                                                                                                                           |
+| `stacks`       | Stack guides applied to code requests, with or without a command. Project conventions override generic stack advice                                    |
+| `checks`       | Project commands with the `paths` they cover. A ticket must pass its `checks_required` and every `**` check. A check without `paths` is yours to run |
 
-Unknown keys and earlier configurations are rejected. Changing hosts or stacks
-means rerunning `sdd install`; the installer never rewrites the config. Keep
-project rules in `AGENTS.md` outside the Beligent SDD section or in your own files,
-never in the installed skill copies.
-
-### Skills only
-
-The external `skills` CLI can copy the skill folders from a Git source
-(`npx skills@1.7.2 add <git-source> --skill '*' --agent codex --copy -y`). It does
-not write the config, the stack guides or the instruction sections, so the
-command-only section and stack guides are missing until `sdd install` adds them.
+Unknown keys and configurations from earlier versions are rejected with a
+message that explains what to do. After changing hosts or stacks, rerun
+`sdd install`; the installer never rewrites the config. Keep project rules in
+`AGENTS.md` outside the Beligent SDD section, never in the installed skill
+copies.
 
 ## Supported assistants
 
@@ -230,56 +205,27 @@ command-only section and stack guides are missing until `sdd install` adds them.
 | Copilot cloud agent            | `github-copilot-cloud` | `.agents/skills/`, committed | Assign a task starting with `/sdd-implement TICKET-042`                 |
 | Cursor Agent                   | `cursor`               | `.agents/skills/`            | `/` in Agent chat, then `sdd-implement`                                 |
 
-Paths and starts come from host documentation, checked 2026-11-06 and 2026-11-08.
-The installer is tested for every host in disposable projects; **no host has
-been verified live yet**.
-
-### Command-only activation
-
-| Assistant                            | How automatic loading is turned off                                                        |
-| ------------------------------------ | ------------------------------------------------------------------------------------------ |
-| Claude Code, VS Code Copilot, Cursor | `disable-model-invocation: true` in each `SKILL.md`                                        |
-| Codex                                | `agents/openai.yaml` in each skill with `policy.allow_implicit_invocation: false`          |
-| Copilot CLI and cloud agent          | Not documented; the skill descriptions and the `AGENTS.md` section are the only protection |
-
-Every packaged skill carries both settings; `npm run validate:framework` fails
-if one is missing.
-
-### Host notes
+Skills load only as commands. Claude Code, VS Code Copilot and Cursor honor
+`disable-model-invocation: true` in each `SKILL.md`; Codex honors
+`policy.allow_implicit_invocation: false` in each skill's `agents/openai.yaml`.
+Copilot CLI and the cloud agent document no such setting, so there the skill
+descriptions and the `AGENTS.md` section carry that rule.
 
 - **Copilot in VS Code:** the Copilot harness documents `.github/skills/`; the
-  Local harness also reads `.agents/skills/` and `.claude/skills/`. Name the
-  harness when testing. If the Copilot harness does not list the skills, map
-  the Copilot hosts to `.github/skills/`.
-- **Copilot cloud agent:** commit the installed files first. GitHub documents
-  that the agent picks skills from the prompt; a command at the start is
-  untested there. Merging the draft PR is always your decision.
+  Local harness also reads `.agents/skills/` and `.claude/skills/`.
+- **Copilot cloud agent:** commit the installed files first. Merging the draft
+  PR is always your decision.
 - **Cursor:** reads the root `AGENTS.md` automatically. `.cursor/rules/` stays yours.
 - **Mixed installs:** `claude-code` with a Copilot host or Cursor writes both
-  `.claude/skills/` and `.agents/skills/`. Those hosts also read `.claude/skills/`
-  and may list each skill twice; the install plan and `sdd doctor` warn about it,
-  and the copies are identical.
+  `.claude/skills/` and `.agents/skills/`. Those hosts may list each skill twice;
+  the copies are identical, and `sdd doctor` reports it.
 
 Sources: [Codex skills](https://learn.chatgpt.com/docs/build-skills),
 [Claude Code skills](https://code.claude.com/docs/en/skills),
 [VS Code agent skills](https://code.visualstudio.com/docs/agent-customization/agent-skills),
 [Copilot CLI skills](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-skills),
 [Copilot cloud agent skills](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-cloud-agent/add-skills),
-[Cursor skills](https://cursor.com/docs/context/skills),
-[Codex explicit-only skills](https://github.com/zanellig/skills/issues/6).
-
-### Live test in a host
-
-Use a disposable repository and a fresh session per step, and record the host,
-version, date and what you observed.
-
-1. `sdd install --host <id> --apply`; a repeat dry run reports no changes.
-2. The five skills appear in the command list; `/sdd-init` proposes and writes nothing before approval.
-3. A small change without a command loads no skill, applies the stack guide and creates no ticket.
-4. `/sdd-define`, then `/sdd-implement`: requirements, recorded checks, no `done` while a check fails.
-5. Right after `/sdd-define`, in the same session, ask for a small change without a command: the agent makes it without questions and the ticket is unchanged.
-6. `/sdd-audit` a done ticket after a regression: it reports the failure, runs only config checks or approved commands, and edits nothing.
-7. `/sdd-deliver` with a disposable remote: it proposes removing the ticket, stages exactly the change and pushes only when asked.
+[Cursor skills](https://cursor.com/docs/context/skills).
 
 ## CLI reference
 
@@ -293,39 +239,35 @@ version, date and what you observed.
 | `usage report [--store <path>] [--json]`                                                           | Summarize recorded usage by skill                                                        |
 | `version`                                                                                          | Print the version                                                                        |
 
-You don't need `sdd` installed. The skills run it as `sdd` when it exists,
-otherwise as `npx --no-install sdd` from the project's dependencies, otherwise as
-`npx @beligent/sdd-framework@latest`, which downloads it for that run only. They
-never install it.
-
+You don't need `sdd` installed: the skills run it as `sdd` when it exists,
+otherwise from the project's dependencies, otherwise through
+`npx @beligent/sdd-framework@latest` for that run only. They never install it.
 Only `install --apply` and `usage import` write files. `validate` and `doctor`
-exit 1 on errors; `doctor` exits 0 when it finds only warnings.
+exit 1 on errors.
 
-**Token usage** is optional and local. Capture the host's structured output, for
-example `codex exec --json '…' > run.jsonl` or
+**Token usage** is optional and stays on your machine. Capture the host's
+structured output, for example `codex exec --json '…' > run.jsonl` or
 `claude -p --output-format stream-json --verbose '…' > run.jsonl`, then run
 `sdd usage import --agent codex --skill sdd-implement --file run.jsonl`. The
 store, `.sdd/beligent/usage.jsonl` by default, keeps only numbers, agent, skill,
 optional task, timestamp and a deduplication hash; never prompts, responses or
-tool output. Linked stores are rejected; add the file to `.gitignore`.
+tool output. Add it to `.gitignore`.
 
-## Optional specialists
+## Design choices
 
-Use one main agent by default. If your host supports configured specialists,
-you may give, for example, a React accessibility reviewer a bounded task: the
-ticket criteria, the stack guide, the scoped diff and the expected evidence.
-Specialists never replace a command or authorize Git actions.
-
-## Limits
-
-`sdd validate` checks structure and declared evidence. It cannot prove that the
-requirements capture your intent, that tests exercise the criteria or that
-commands really ran; you review the work. Installation checks do not prove that
-a host loads the skills or honors command-only activation; test that live.
+- **Your judgment stays in charge.** The assistant implements and records
+  evidence; you decide what is accepted. `sdd validate` checks structure and
+  declared evidence, not whether the requirements capture your intent or the
+  tests exercise them, so review the work as you would any change.
+- **Explicit over automatic.** Nothing runs unless you type a command, and Git
+  changes happen only through `/sdd-deliver`.
+- **Plain files.** Methodology lives in Markdown you can read and diff;
+  tickets live in your repository; nothing is hosted.
+- **One main agent.** If your assistant supports specialists, you may give one
+  a bounded task (the ticket criteria, the stack guide, the scoped diff), but
+  specialists never replace a command or authorize Git actions.
 
 ## Contributing
-
-### Repository layout
 
 ```text
 skills/            # the five skills: SKILL.md, references/, assets/, agents/openai.yaml, PACKAGED.json
@@ -339,19 +281,10 @@ examples/          # runnable walkthrough and sample tickets
 tests/             # behavioral test suite
 ```
 
-- `src/packaging/inventory.ts` lists the five skills, the stacks and the earlier
-  names that are reported.
-- `src/packaging/hosts.ts` maps each `--host` to its skill root, instruction
-  files and start hint; hosts sharing a root share one copy.
-- `src/packaging/install.ts` plans and applies `sdd install` as described above.
-- Shared skill resources have one canonical source, registered in
-  `src/packaging/sync-assets.ts`. Edit the canonical file, run
-  `npm run sync:assets`, and never edit a generated copy; each skill's
-  `PACKAGED.json` lists its copies.
-
-### Checks
-
-Run all of these before submitting a change:
+Shared skill resources have one canonical source, registered in
+`src/packaging/sync-assets.ts`. Edit the canonical file, run
+`npm run sync:assets`, and never edit a generated copy; each skill's
+`PACKAGED.json` lists its copies. Run all of these before submitting a change:
 
 ```sh
 npm ci
@@ -364,12 +297,13 @@ npm run check:version             # package.json and package-lock.json agree
 npm run validate:package          # build and check npm pack --dry-run contents
 ```
 
-The [walkthrough](examples/workflow-fixture/README.md) can also be run directly
-with `npm run build && node examples/workflow-fixture/walkthrough.mjs`.
+The [walkthrough](examples/workflow-fixture/README.md) shows the whole flow
+against the real CLI: `npm run build && node examples/workflow-fixture/walkthrough.mjs`.
 
-### Releasing
+`package.json` is the version authority. CI validates but never publishes;
+releases are published manually after the checks pass. See the
+[changelog](CHANGELOG.md) for release notes.
 
-`package.json` is the version authority; update the lockfile with it and keep no
-separate `VERSION` file. CI validates but never publishes; publishing is a
-manual maintainer step after the checks pass. Users upgrade by rerunning
-`sdd install --apply` from the newer package and reviewing the dry run first.
+## License
+
+See [LICENSE](LICENSE).
