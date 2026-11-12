@@ -43,8 +43,8 @@ refining open tickets only; it never changes code.
 ## Refine, block or cancel
 
 Re-read the ticket immediately before writing. Refine only `todo`,
-`in-progress` or `blocked` tickets; done and cancelled tickets are final, so new
-scope is a new ticket. Set `blocked` with `blocked_reason` when the developer
+`in-progress` or `blocked` tickets. A done ticket is improved by reopening it
+with `/sdd-implement`; a cancelled ticket is final, so new scope is a new ticket. Set `blocked` with `blocked_reason` when the developer
 must decide something first. Cancel only on the developer's explicit decision,
 with `cancelled_reason`. Validate `depends_on` links: no self-links or cycles.
 

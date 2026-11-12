@@ -16,8 +16,12 @@ checks and its own ticket updates. It never commits, pushes or opens a PR.
 
 1. Select the ticket named in the prompt. Without one, list open tickets and ask.
    With no ticket at all, offer `/sdd-define` first.
-   - `done` or `cancelled`: report that it is final and stop. Suggest a new
-     ticket (`/sdd-define …`) or doing the change without the framework.
+   - `cancelled`: report that it is final and stop. Suggest a new ticket
+     (`/sdd-define …`) or doing the change without the framework.
+   - `done`: reopen it to improve it. Set `in-progress`, and when the request
+     adds behavior the criteria do not cover, add it to Requirements with a new
+     criterion; keep the existing ones. Name any open ticket that lists it in
+     `depends_on`; those wait until it is `done` again.
    - `blocked`: continue only once its `blocked_reason` is resolved; then clear
      it and set `in-progress`.
    - An open `depends_on` ticket (one that exists and is not `done`): set or

@@ -28,5 +28,6 @@ Follow the README, which documents the design.
 
 - Follow the README and the ticket contract in
   `skills/sdd-define/references/records.md`. A ticket is the only record; it is an
-  AI work unit, done when its criteria and required checks pass. Done and
-  cancelled tickets are never reopened; audit is read-only.
+  AI work unit, done when its criteria and required checks pass. Cancelled
+  tickets are never reopened; a done ticket reopens only through
+  `sdd-implement`; audit is read-only.

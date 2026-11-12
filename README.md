@@ -77,9 +77,12 @@ while one of them exists and is not done.
 | `done`        | Every criterion has a passing check, every listed or `**` project check passed and no check is failing. The agent sets it         |
 | `cancelled`   | Dropped on your decision, with `cancelled_reason`                                                                                 |
 
-Done and cancelled tickets are never reopened or edited: a related change is a
-new ticket, or a correction outside the framework, for example in a follow-up
-commit. Deleting a ticket is your decision: before committing, `/sdd-deliver`
+To improve a done ticket, run `/sdd-implement TICKET-042 <improvement>`: the
+agent reopens it as `in-progress`, adds a criterion when the improvement needs
+one, and sets `done` again only when every criterion passes. Open tickets that
+depend on it wait until then. Cancelled tickets are never reopened or edited; a
+related change is a new ticket, or a correction outside the framework, for
+example in a follow-up commit. Deleting a ticket is your decision: before committing, `/sdd-deliver`
 asks whether to delete a done or cancelled ticket and, if so, puts its title and
 criteria in the commit message, so the repository stays clean and the
 requirements stay in Git history. A `depends_on` entry for a deleted ticket

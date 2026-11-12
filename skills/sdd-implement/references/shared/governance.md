@@ -49,8 +49,10 @@ testable criteria and explicit exclusions matter more than closure ceremony.
   the developer. A dependency is open while its ticket exists and is not `done`;
   a cancelled dependency needs the developer's decision. A failing check the
   agent can fix keeps `in-progress`.
-- Final: done and cancelled tickets are never reopened or edited. A related
-  change is a new ticket, or a correction made outside the framework.
+- Final: cancelled tickets are never reopened or edited. A done ticket reopens
+  only through `sdd-implement`, which sets `in-progress` and may add criteria;
+  it is `done` again only when every criterion, old and new, passes. A related
+  change can also be a new ticket, or a correction made outside the framework.
 - Removal: only the developer decides. Before committing, `sdd-deliver` asks
   whether to delete a done or cancelled ticket; when deleted, its title and
   criteria go into the commit message. A `depends_on` entry for a deleted

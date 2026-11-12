@@ -70,6 +70,6 @@ relevant checks. Ticket completion covers the AI's part only; it needs no human
 acceptance decision or Git milestone. Record failures, unverified checks and
 contradictory results honestly.
 
-Audits are read-only, including for closed tickets. Done tickets are final:
-report a missed criterion as a finding; its fix is ordinary work, or a new
-ticket. Delivery happens only through `sdd-deliver`.
+Audits are read-only, including for closed tickets. Report a missed criterion
+in a done ticket as a finding; its fix is ordinary work, a new ticket, or
+reopening the ticket with `/sdd-implement`. Delivery happens only through `sdd-deliver`.

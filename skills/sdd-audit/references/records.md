@@ -68,5 +68,6 @@ A ticket may be `done` only when (*validated*):
    `paths` include `**`, has a passing result;
 3. no recorded check is `fail`, `blocked` or `not-run`.
 
-Done and cancelled tickets are final: never reopened or edited. See the
+Cancelled tickets are final: never reopened or edited. A done ticket reopens
+only through `sdd-implement`. See the
 [shared contract](shared/governance.md#tickets) for blocked, removal and IDs.

@@ -8,6 +8,9 @@
   that work and `/sdd-deliver` commits it with the ticket's work unless the
   developer names paths to leave out. Re-run `sdd install --apply` to update the
   instruction section.
+- `/sdd-implement` on a done ticket reopens it to improve it: it sets
+  `in-progress`, adds a criterion when the improvement needs one, and sets
+  `done` again only when every criterion passes. Cancelled tickets stay final.
 
 ## 1.0.2
 
